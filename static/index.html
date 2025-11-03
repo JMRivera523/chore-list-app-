@@ -820,9 +820,9 @@
                 <div class="form-group">
                     <label for="priority">Priority</label>
                     <select id="priority" name="priority">
-                        <option value="low">🟢 Low</option>
-                        <option value="medium" selected>🟡 Medium</option>
-                        <option value="high">🔴 High</option>
+                        <option value="low">🟢 Low (1 point)</option>
+                        <option value="medium" selected>🟡 Medium (1 point)</option>
+                        <option value="high">🔴 High (2 points)</option>
                     </select>
                 </div>
                 
@@ -906,8 +906,19 @@
 
         // Select player
         function selectPlayer(userId) {
-            currentUser = users.find(u => u.id === userId);
-            if (!currentUser) return;
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            // Check PIN for admin accounts
+            if (user.role === 'admin' && user.pin) {
+                const enteredPin = prompt(`🔒 Enter PIN for ${user.name}:`);
+                if (enteredPin !== user.pin) {
+                    alert('❌ Incorrect PIN!');
+                    return;
+                }
+            }
+
+            currentUser = user;
 
             // Update UI
             document.getElementById('playerSelection').style.display = 'none';
@@ -979,6 +990,10 @@
                     recurrenceBadge = '<span class="badge">⭐ One-time</span>';
                 }
 
+                // Points badge
+                const points = chore.points || 1;
+                const pointsBadge = `<span class="badge">⭐ ${points} ${points === 1 ? 'point' : 'points'}</span>`;
+
                 let completedBy = '';
                 if (isCompleted && chore.completed_by) {
                     const completer = users.find(u => u.id === chore.completed_by);
@@ -1045,6 +1060,7 @@
                         <div class="chore-header">
                             <div class="chore-title">${escapeHtml(chore.title)}</div>
                             <div class="chore-badges">
+                                ${pointsBadge}
                                 ${recurrenceBadge}
                                 ${chore.assigned_to_all ? '<span class="badge">👥 Everyone</span>' : '<span class="badge">👤 Assigned</span>'}
                             </div>

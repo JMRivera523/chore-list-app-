@@ -34,6 +34,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 role TEXT NOT NULL CHECK(role IN ('admin', 'standard')),
+                pin TEXT DEFAULT NULL,
                 avatar TEXT DEFAULT '👤',
                 color TEXT DEFAULT '#6366f1',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -48,6 +49,14 @@ def init_db():
         
         try:
             conn.execute('ALTER TABLE users ADD COLUMN color TEXT DEFAULT "#6366f1"')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        try:
+            conn.execute('ALTER TABLE users ADD COLUMN pin TEXT DEFAULT NULL')
+            # Set PIN for admin accounts
+            conn.execute("UPDATE users SET pin = '1234' WHERE role = 'admin'")
+            conn.commit()
         except sqlite3.OperationalError:
             pass  # Column already exists
         
@@ -71,6 +80,7 @@ def init_db():
                 description TEXT,
                 completed BOOLEAN NOT NULL DEFAULT 0,
                 priority TEXT DEFAULT 'medium',
+                points INTEGER DEFAULT 1,
                 recurrence_type TEXT DEFAULT 'weekly' CHECK(recurrence_type IN ('daily', 'weekly', 'one-time')),
                 assigned_to_all BOOLEAN NOT NULL DEFAULT 1,
                 completed_by INTEGER,
@@ -79,6 +89,16 @@ def init_db():
                 FOREIGN KEY (completed_by) REFERENCES users (id)
             )
         ''')
+        
+        # Add points column if it doesn't exist (for existing databases)
+        try:
+            conn.execute('ALTER TABLE chores ADD COLUMN points INTEGER DEFAULT 1')
+            # Update existing chores: high priority = 2 points, others = 1 point
+            conn.execute("UPDATE chores SET points = 2 WHERE priority = 'high' AND points = 1")
+            conn.execute("UPDATE chores SET points = 1 WHERE priority != 'high' AND points IS NULL")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         
         # Create chore assignments table (for user-specific assignments)
         conn.execute('''
@@ -269,17 +289,46 @@ def get_chores():
     conn = get_db_connection()
     
     if is_admin:
-        # Admins see all chores
-        chores = conn.execute('SELECT * FROM chores ORDER BY created_at DESC').fetchall()
-    elif user_id:
-        # Regular users: incomplete chores (for all) + chores completed by this user
+        # Admins see all chores, sorted by priority (high first)
         chores = conn.execute('''
             SELECT * FROM chores 
-            WHERE completed = 0 OR completed_by = ?
-            ORDER BY created_at DESC
-        ''', (user_id,)).fetchall()
+            ORDER BY 
+                CASE priority 
+                    WHEN 'high' THEN 1 
+                    WHEN 'medium' THEN 2 
+                    WHEN 'low' THEN 3 
+                END,
+                created_at DESC
+        ''').fetchall()
+    elif user_id:
+        # Regular users see:
+        # 1. General chores (assigned_to_all = 1) that are incomplete OR completed by them
+        # 2. Assigned chores where they are assigned
+        chores = conn.execute('''
+            SELECT DISTINCT c.* FROM chores c
+            LEFT JOIN chore_assignments ca ON c.id = ca.chore_id
+            WHERE 
+                (c.assigned_to_all = 1 AND (c.completed = 0 OR c.completed_by = ?))
+                OR (c.assigned_to_all = 0 AND ca.user_id = ?)
+            ORDER BY 
+                CASE c.priority 
+                    WHEN 'high' THEN 1 
+                    WHEN 'medium' THEN 2 
+                    WHEN 'low' THEN 3 
+                END,
+                c.created_at DESC
+        ''', (user_id, user_id)).fetchall()
     else:
-        chores = conn.execute('SELECT * FROM chores ORDER BY created_at DESC').fetchall()
+        chores = conn.execute('''
+            SELECT * FROM chores 
+            ORDER BY 
+                CASE priority 
+                    WHEN 'high' THEN 1 
+                    WHEN 'medium' THEN 2 
+                    WHEN 'low' THEN 3 
+                END,
+                created_at DESC
+        ''').fetchall()
     
     # Add assignment info to each chore
     chores_list = []
@@ -328,10 +377,13 @@ def create_chore():
     assigned_to_all = data.get('assigned_to_all', True)
     assigned_users = data.get('assigned_users', [])  # List of user IDs
     
+    # Set points based on priority: high = 2 points, others = 1 point
+    points = 2 if priority == 'high' else 1
+    
     conn = get_db_connection()
     cursor = conn.execute(
-        'INSERT INTO chores (title, description, priority, recurrence_type, assigned_to_all) VALUES (?, ?, ?, ?, ?)',
-        (title, description, priority, recurrence_type, 1 if assigned_to_all else 0)
+        'INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all) VALUES (?, ?, ?, ?, ?, ?)',
+        (title, description, priority, points, recurrence_type, 1 if assigned_to_all else 0)
     )
     conn.commit()
     chore_id = cursor.lastrowid
@@ -482,10 +534,10 @@ def complete_assignment(assignment_id):
 
 @app.route('/api/leaderboard', methods=['GET'])
 def get_leaderboard():
-    """Get leaderboard with points (completed chores count) for each user this week."""
+    """Get leaderboard with points (sum of chore point values) for each user this week."""
     conn = get_db_connection()
     
-    # Count completed general chores + completed assignments
+    # Sum points from completed general chores + completed assignments
     leaderboard = conn.execute('''
         SELECT 
             u.id,
@@ -493,13 +545,14 @@ def get_leaderboard():
             u.role,
             u.avatar,
             u.color,
-            (
-                SELECT COUNT(*) FROM chores c 
+            COALESCE((
+                SELECT SUM(c.points) FROM chores c 
                 WHERE c.completed_by = u.id AND c.completed = 1
-            ) + (
-                SELECT COUNT(*) FROM chore_assignments ca 
+            ), 0) + COALESCE((
+                SELECT SUM(c.points) FROM chore_assignments ca
+                JOIN chores c ON ca.chore_id = c.id
                 WHERE ca.user_id = u.id AND ca.completed = 1
-            ) as points
+            ), 0) as points
         FROM users u
         ORDER BY points DESC, u.name ASC
     ''').fetchall()
