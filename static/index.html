@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chore List - Points Tracker</title>
+    <title>🏠 Chore Champions!</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&family=Fredoka:wght@400;600&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
@@ -12,395 +14,463 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating bubbles background */
+        .bubble {
+            position: fixed;
+            bottom: -100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: rise 15s infinite ease-in;
+            z-index: 0;
+        }
+
+        @keyframes rise {
+            to {
+                bottom: 110vh;
+                transform: translateX(100px) rotate(360deg);
+            }
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Player Selection Screen */
+        /* ========= PLAYER SELECTION ========= */
         .player-selection {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 80vh;
+            min-height: 85vh;
+            text-align: center;
         }
 
         .player-selection h1 {
-            color: white;
-            font-size: 3em;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            font-family: 'Bubblegum Sans', cursive;
+            color: #fff;
+            font-size: 4em;
+            margin-bottom: 10px;
+            text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
 
         .player-selection p {
-            color: white;
-            font-size: 1.2em;
+            color: #fff;
+            font-size: 1.5em;
             margin-bottom: 40px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .player-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 25px;
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
         }
 
         .player-card {
             background: white;
-            padding: 40px 30px;
-            border-radius: 15px;
+            padding: 30px 20px;
+            border-radius: 30px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: 0.5s;
+        }
+
+        .player-card:hover::before {
+            left: 100%;
         }
 
         .player-card:hover {
-            transform: translateY(-10px) scale(1.05);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-15px) scale(1.08) rotate(-2deg);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
         }
 
-        .player-card.admin {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            color: #333;
-        }
-
-        .player-card.standard {
-            background: white;
-            color: #333;
-        }
-
-        .player-card .player-icon {
-            font-size: 3em;
+        .player-avatar {
+            font-size: 5em;
             margin-bottom: 15px;
+            display: block;
+            animation: wiggle 3s infinite;
         }
 
-        .player-card .player-name {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
         }
 
-        .player-card .player-role {
+        .player-card h2 {
+            font-family: 'Bubblegum Sans', cursive;
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .player-card .role {
             font-size: 0.9em;
-            opacity: 0.8;
+            color: #666;
+            font-weight: 600;
         }
 
-        /* Main App */
-        .main-app {
+        /* ========= MAIN APP ========= */
+        .app-container {
             display: none;
         }
 
         .header {
+            background: white;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
-        h1 {
-            color: white;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .user-info {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
+        .header-left {
             display: flex;
             align-items: center;
             gap: 15px;
         }
 
-        .user-name {
+        .current-player {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 12px 20px;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.2em;
             font-weight: 600;
-            font-size: 1.1em;
-        }
-
-        .btn-refresh {
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
             transition: all 0.3s;
+            position: relative;
         }
 
-        .btn-refresh:hover {
+        .current-player:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .section {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="text"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
+        .current-player-avatar {
+            font-size: 2em;
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
+            border-radius: 50px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1em;
             font-weight: 600;
+            cursor: pointer;
             transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
-            width: 100%;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-edit {
-            background: #4CAF50;
+        .btn-secondary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
-            padding: 8px 16px;
-            margin-right: 8px;
         }
 
-        .btn-edit:hover {
-            background: #45a049;
-        }
-
-        .btn-delete {
-            background: #f44336;
+        .btn-success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
             color: white;
-            padding: 8px 16px;
         }
 
-        .btn-delete:hover {
-            background: #da190b;
+        .btn-danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
         }
 
-        .chores-list {
+        /* ========= LEADERBOARD ========= */
+        .leaderboard {
+            background: white;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
+        }
+
+        .leaderboard h2 {
+            font-family: 'Bubblegum Sans', cursive;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .leaderboard-grid {
             display: grid;
             gap: 15px;
-            margin-bottom: 30px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .leaderboard-item:hover {
+            transform: translateX(10px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .leaderboard-item.rank-1 {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            transform: scale(1.05);
+        }
+
+        .leaderboard-item.rank-2 {
+            background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%);
+        }
+
+        .leaderboard-item.rank-3 {
+            background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+        }
+
+        .leaderboard-rank {
+            font-size: 2em;
+            font-weight: bold;
+            width: 50px;
+            text-align: center;
+        }
+
+        .leaderboard-avatar {
+            font-size: 3em;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .leaderboard-info {
+            flex: 1;
+        }
+
+        .leaderboard-name {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .leaderboard-points {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========= CHORES ========= */
+        .chores-section {
+            background: white;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .chores-section h2 {
+            font-family: 'Bubblegum Sans', cursive;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .chore-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 25px;
+            border-radius: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chore-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: 0.5s;
+        }
+
+        .chore-card:hover::before {
+            left: 100%;
         }
 
         .chore-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .chore-card.completed {
             opacity: 0.7;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%);
+        }
+
+        .chore-card.priority-high {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .chore-card.priority-medium {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .chore-card.priority-low {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
         }
 
         .chore-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            gap: 15px;
         }
 
         .chore-title {
-            font-size: 1.3em;
+            font-size: 1.8em;
+            font-weight: 600;
             color: #333;
             flex: 1;
         }
 
-        .chore-card.completed .chore-title {
-            text-decoration: line-through;
-            color: #999;
+        .chore-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .priority-badge {
-            padding: 4px 12px;
+        .badge {
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 0.85em;
             font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .priority-high {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .priority-medium {
-            background: #fff3e0;
-            color: #ef6c00;
-        }
-
-        .priority-low {
-            background: #e8f5e9;
-            color: #2e7d32;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .chore-description {
-            color: #666;
+            color: #555;
             margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .chore-completed-by {
-            font-size: 0.9em;
-            color: #667eea;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-
-        .chore-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .checkbox-container input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            margin-right: 8px;
-            cursor: pointer;
+            font-size: 1.1em;
         }
 
         .chore-actions {
             display: flex;
-            gap: 8px;
-        }
-
-        /* Leaderboard */
-        .leaderboard-list {
-            display: grid;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
             align-items: center;
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-            border-radius: 10px;
-            transition: transform 0.3s;
         }
 
-        .leaderboard-item:hover {
-            transform: translateX(5px);
-        }
-
-        .leaderboard-item.rank-1 {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
-        }
-
-        .leaderboard-item.rank-2 {
-            background: linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%);
-        }
-
-        .leaderboard-item.rank-3 {
-            background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%);
-        }
-
-        .leaderboard-rank {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #333;
-            width: 40px;
-            text-align: center;
-        }
-
-        .leaderboard-name {
-            flex: 1;
-            font-size: 1.2em;
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            background: white;
+            border-radius: 50px;
             font-weight: 600;
-            color: #333;
+            cursor: pointer;
+            transition: all 0.3s;
         }
 
-        .leaderboard-points {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #667eea;
+        .checkbox-wrapper:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
         }
 
-        .loading {
-            text-align: center;
-            color: white;
-            font-size: 1.2em;
-            padding: 20px;
-        }
-
-        /* Modal */
+        /* ========= MODAL ========= */
         .modal {
             display: none;
             position: fixed;
@@ -409,216 +479,786 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 15px;
+            background: white;
+            margin: 5% auto;
+            padding: 40px;
+            border-radius: 30px;
             width: 90%;
-            max-width: 500px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s;
+            position: relative;
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
-        .modal-header h2 {
+        .modal-content h2 {
+            font-family: 'Bubblegum Sans', cursive;
+            font-size: 2.5em;
+            margin-bottom: 25px;
             color: #333;
+            text-align: center;
         }
 
         .close {
-            font-size: 28px;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 2em;
             font-weight: bold;
             color: #999;
             cursor: pointer;
-            transition: color 0.3s;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
 
         .close:hover {
+            background: #f0f0f0;
             color: #333;
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Avatar Picker */
+        .avatar-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .avatar-option {
+            font-size: 3em;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.3s;
+            background: #f5f5f5;
+            border: 3px solid transparent;
+        }
+
+        .avatar-option:hover {
+            transform: scale(1.15);
+            background: #e0e0e0;
+        }
+
+        .avatar-option.selected {
+            border-color: #667eea;
+            background: #e8eaff;
+            transform: scale(1.1);
+        }
+
+        /* Color Picker */
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .color-option {
+            width: 100%;
+            height: 60px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: fixed;
+            animation: confetti-fall 3s linear;
+            z-index: 9999;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .player-selection h1 {
+                font-size: 2.5em;
+            }
+
+            .player-card {
+                padding: 25px 15px;
+            }
+
+            .player-avatar {
+                font-size: 3.5em;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .chore-title {
+                font-size: 1.4em;
+            }
+
+            .leaderboard h2,
+            .chores-section h2 {
+                font-size: 2em;
+            }
         }
 
         .hidden {
-            display: none !important;
+            display: none;
+        }
+
+        /* Assignment specific styles */
+        #userAssignments {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+        }
+
+        .assignment-checkbox {
+            width: auto !important;
+            margin-right: 10px;
+        }
+
+        .completed-by {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 8px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
-    <!-- Player Selection Screen -->
-    <div id="playerSelection" class="player-selection">
-        <h1>🏠 Chore List</h1>
-        <p>Select your player to continue</p>
-        <div class="player-grid" id="playerGrid">
-            <div class="loading">Loading players...</div>
+    <!-- Animated Background Bubbles -->
+    <div class="bubble" style="width: 80px; height: 80px; left: 10%; animation-delay: 0s;"></div>
+    <div class="bubble" style="width: 40px; height: 40px; left: 30%; animation-delay: 2s;"></div>
+    <div class="bubble" style="width: 60px; height: 60px; left: 50%; animation-delay: 4s;"></div>
+    <div class="bubble" style="width: 90px; height: 90px; left: 70%; animation-delay: 1s;"></div>
+    <div class="bubble" style="width: 50px; height: 50px; left: 85%; animation-delay: 3s;"></div>
+
+    <div class="container">
+        <!-- PLAYER SELECTION SCREEN -->
+        <div class="player-selection" id="playerSelection">
+            <h1>🏠 Chore Champions!</h1>
+            <p>Who's ready to earn some points?</p>
+            <div class="player-grid" id="playerGrid"></div>
+        </div>
+
+        <!-- MAIN APP -->
+        <div class="app-container" id="appContainer">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <div class="current-player" id="currentPlayerDisplay" onclick="openProfileModal()">
+                        <span class="current-player-avatar" id="currentPlayerAvatar">👤</span>
+                        <span id="currentPlayerName">Player</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="switchPlayer()">🔄 Switch Player</button>
+                    <button class="btn btn-primary hidden" id="addChoreBtn" onclick="openAddChoreModal()">➕ Add Chore</button>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="leaderboard">
+                <h2>🏆 Leaderboard</h2>
+                <div class="leaderboard-grid" id="leaderboardGrid"></div>
+            </div>
+
+            <!-- Chores -->
+            <div class="chores-section">
+                <h2>📝 Chores</h2>
+                <div id="choresList"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Main App -->
-    <div id="mainApp" class="main-app container">
-        <div class="header">
-            <h1>🏠 Chore List</h1>
-            <div class="user-info">
-                <div>
-                    <div class="user-name" id="currentUserName"></div>
-                </div>
-                <button class="btn-refresh" onclick="logout()">🔄 Switch Player</button>
+    <!-- Profile Customization Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeProfileModal()">&times;</span>
+            <h2>✨ Customize Profile</h2>
+            
+            <div class="form-group">
+                <label>Choose Your Avatar:</label>
+                <div class="avatar-picker" id="avatarPicker"></div>
             </div>
+            
+            <div class="form-group">
+                <label>Choose Your Color:</label>
+                <div class="color-picker" id="colorPicker"></div>
+            </div>
+            
+            <button class="btn btn-success" onclick="saveProfile()" style="width: 100%; font-size: 1.2em;">💾 Save Profile</button>
         </div>
+    </div>
 
-        <!-- Add Chore Form (Admins Only) -->
-        <div id="addChoreSection" class="section hidden">
-            <h2 style="margin-bottom: 20px; color: #333;">Add New Chore</h2>
-            <form id="addChoreForm">
+    <!-- Add/Edit Chore Modal -->
+    <div id="choreModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeChoreModal()">&times;</span>
+            <h2 id="choreModalTitle">➕ Add New Chore</h2>
+            <form id="choreForm">
                 <div class="form-group">
                     <label for="title">Title *</label>
-                    <input type="text" id="title" name="title" required placeholder="e.g., Wash the dishes">
+                    <input type="text" id="title" name="title" required placeholder="e.g., Make your bed">
                 </div>
+                
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea id="description" name="description" placeholder="Additional details..."></textarea>
+                    <textarea id="description" name="description" placeholder="Any extra details..."></textarea>
                 </div>
+                
                 <div class="form-group">
                     <label for="priority">Priority</label>
                     <select id="priority" name="priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
+                        <option value="low">🟢 Low</option>
+                        <option value="medium" selected>🟡 Medium</option>
+                        <option value="high">🔴 High</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
                     <label for="recurrenceType">Recurrence</label>
                     <select id="recurrenceType" name="recurrenceType">
-                        <option value="daily">Daily (resets every morning)</option>
-                        <option value="weekly" selected>Weekly (resets Monday morning)</option>
-                        <option value="one-time">One-time (never resets)</option>
+                        <option value="daily">🌅 Daily recurring (resets at midnight)</option>
+                        <option value="weekly" selected>📅 Weekly recurring (resets Monday morning)</option>
+                        <option value="one-time">⭐ One-time task (stays done)</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
                     <label style="display: flex; align-items: center; cursor: pointer;">
                         <input type="checkbox" id="assignToAll" name="assignToAll" checked onchange="toggleAssignments()" style="width: auto; margin-right: 10px;">
                         <span>Everyone can complete (general chore)</span>
                     </label>
-                    <div id="userAssignments" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-                        <p style="margin-bottom: 10px; font-weight: 600;">Assign to:</p>
+                    <div id="userAssignments" style="display: none;">
+                        <p style="margin-bottom: 10px; font-weight: 600;">Assign to specific players:</p>
                         <div id="assignmentCheckboxes"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Add Chore</button>
-            </form>
-        </div>
-
-        <!-- Chores List -->
-        <div class="section">
-            <h2 style="margin-bottom: 20px; color: #333;">📋 Chores</h2>
-            <div id="choresList" class="chores-list">
-                <div class="loading">Loading chores...</div>
-            </div>
-        </div>
-
-        <!-- Leaderboard -->
-        <div class="section">
-            <h2 style="margin-bottom: 15px; color: #333;">🏆 Leaderboard</h2>
-            <div id="leaderboardList" class="leaderboard-list">
-                <div class="loading">Loading leaderboard...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Modal (Admins Only) -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Edit Chore</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
-            </div>
-            <form id="editChoreForm">
-                <input type="hidden" id="editChoreId">
-                <div class="form-group">
-                    <label for="editTitle">Title *</label>
-                    <input type="text" id="editTitle" name="title" required>
-                </div>
-                <div class="form-group">
-                    <label for="editDescription">Description</label>
-                    <textarea id="editDescription" name="description"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="editPriority">Priority</label>
-                    <select id="editPriority" name="priority">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editRecurrenceType">Recurrence</label>
-                    <select id="editRecurrenceType" name="recurrenceType">
-                        <option value="daily">Daily (resets every morning)</option>
-                        <option value="weekly">Weekly (resets Monday morning)</option>
-                        <option value="one-time">One-time (never resets)</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Update Chore</button>
+                
+                <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1.2em;">💾 Save Chore</button>
             </form>
         </div>
     </div>
 
-    <!-- History Modal -->
+    <!-- User History Modal -->
     <div id="historyModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="historyUserName"></h2>
-                <span class="close" onclick="closeHistoryModal()">&times;</span>
-            </div>
-            <h3 style="margin-bottom: 15px; color: #667eea;">Completed This Week:</h3>
+            <span class="close" onclick="closeHistoryModal()">&times;</span>
+            <h2 id="historyModalTitle">🎉 Completed Chores</h2>
             <div id="historyList"></div>
         </div>
     </div>
 
     <script>
-        const API_URL = '/api/chores';
-        const USERS_URL = '/api/users';
-        const LEADERBOARD_URL = '/api/leaderboard';
-        
-        let currentUser = null;
+        // Global variables
         let users = [];
+        let currentUser = null;
         let chores = [];
+        let editingChoreId = null;
 
-        // Load users on page load
-        document.addEventListener('DOMContentLoaded', () => {
+        // Avatar and color options
+        const avatars = ['😀', '😎', '🤩', '🥳', '🤖', '👾', '🦄', '🐶', '🐱', '🐼', '🦊', '🐸', '🦁', '🐯', '🐨', '🐵', '🦉', '🦋', '🌈', '⭐', '🎨', '🎮', '⚽', '🏀'];
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#FAD7A0', '#D7BDE2', '#A2D9CE', '#F5B7B1', '#AED6F1', '#A9DFBF', '#FAD7A0', '#D7DBDD', '#F9E79F', '#A3E4D7', '#D5A6BD'];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
             loadUsers();
         });
 
+        // Load users
         async function loadUsers() {
             try {
-                const response = await fetch(USERS_URL);
+                const response = await fetch('/api/users');
                 users = await response.json();
                 renderPlayerSelection();
             } catch (error) {
                 console.error('Error loading users:', error);
-                document.getElementById('playerGrid').innerHTML = '<div style="color: white;">Error loading users</div>';
+                alert('Failed to load users. Please refresh the page.');
             }
         }
 
+        // Render player selection
         function renderPlayerSelection() {
-            const playerGrid = document.getElementById('playerGrid');
-            
-            playerGrid.innerHTML = users.map(user => `
-                <div class="player-card ${user.role}" onclick="selectPlayer(${user.id})">
-                    <div class="player-icon">👤</div>
-                    <div class="player-name">${escapeHtml(user.name)}</div>
-                    <div class="player-role">${user.role === 'admin' ? 'Admin' : 'Player'}</div>
-                </div>
-            `).join('');
+            const grid = document.getElementById('playerGrid');
+            grid.innerHTML = users.map(user => {
+                const bgColor = user.color || '#6366f1';
+                const avatar = user.avatar || '👤';
+                return `
+                    <div class="player-card" style="background: ${bgColor};" onclick="selectPlayer(${user.id})">
+                        <span class="player-avatar">${avatar}</span>
+                        <h2>${escapeHtml(user.name)}</h2>
+                        <div class="role">${user.role === 'admin' ? '⚙️ Admin' : '⭐ Player'}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        let eventListenersSetup = false;
+        // Select player
+        function selectPlayer(userId) {
+            currentUser = users.find(u => u.id === userId);
+            if (!currentUser) return;
+
+            // Update UI
+            document.getElementById('playerSelection').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            
+            const avatar = currentUser.avatar || '👤';
+            const color = currentUser.color || '#6366f1';
+            
+            document.getElementById('currentPlayerAvatar').textContent = avatar;
+            document.getElementById('currentPlayerName').textContent = currentUser.name;
+            document.getElementById('currentPlayerDisplay').style.background = color;
+
+            // Show/hide admin controls
+            if (currentUser.role === 'admin') {
+                document.getElementById('addChoreBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('addChoreBtn').classList.add('hidden');
+            }
+
+            // Load data
+            loadChores();
+            loadLeaderboard();
+        }
+
+        // Switch player
+        function switchPlayer() {
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('playerSelection').style.display = 'flex';
+            currentUser = null;
+        }
+
+        // Load chores
+        async function loadChores() {
+            if (!currentUser) return;
+            
+            try {
+                const isAdmin = currentUser.role === 'admin';
+                const response = await fetch(`/api/chores?user_id=${currentUser.id}&is_admin=${isAdmin}`);
+                chores = await response.json();
+                renderChores();
+            } catch (error) {
+                console.error('Error loading chores:', error);
+                alert('Failed to load chores.');
+            }
+        }
+
+        // Render chores
+        function renderChores() {
+            const list = document.getElementById('choresList');
+            
+            if (chores.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999; font-size: 1.2em; padding: 40px;">No chores yet! 🎉</p>';
+                return;
+            }
+
+            list.innerHTML = chores.map(chore => {
+                const isCompleted = chore.completed;
+                const isAdmin = currentUser.role === 'admin';
+                const completedClass = isCompleted ? 'completed' : '';
+                const priorityClass = `priority-${chore.priority}`;
+                
+                // Recurrence badge
+                let recurrenceBadge = '';
+                if (chore.recurrence_type === 'daily') {
+                    recurrenceBadge = '<span class="badge">🌅 Daily</span>';
+                } else if (chore.recurrence_type === 'weekly') {
+                    recurrenceBadge = '<span class="badge">📅 Weekly</span>';
+                } else {
+                    recurrenceBadge = '<span class="badge">⭐ One-time</span>';
+                }
+
+                let completedBy = '';
+                if (isCompleted && chore.completed_by) {
+                    const completer = users.find(u => u.id === chore.completed_by);
+                    if (completer) {
+                        completedBy = `<div class="completed-by">✅ Completed by ${escapeHtml(completer.name)}</div>`;
+                    }
+                }
+
+                let assignmentHtml = '';
+                if (!chore.assigned_to_all && chore.assignments && chore.assignments.length > 0) {
+                    assignmentHtml = '<div style="margin-top: 15px;">';
+                    chore.assignments.forEach(assignment => {
+                        const isCurrentUser = assignment.user_id === currentUser.id;
+                        const canComplete = isAdmin || isCurrentUser;
+                        
+                        if (canComplete || isAdmin) {
+                            const checkboxId = `assignment-${assignment.id}`;
+                            const checked = assignment.completed ? 'checked' : '';
+                            const disabled = (!canComplete || assignment.completed) ? 'disabled' : '';
+                            
+                            assignmentHtml += `
+                                <div class="checkbox-wrapper" style="margin-bottom: 10px;">
+                                    <input type="checkbox" id="${checkboxId}" ${checked} ${disabled}
+                                        onchange="completeAssignment(${assignment.id}, this.checked)">
+                                    <label for="${checkboxId}" style="cursor: pointer;">
+                                        ${escapeHtml(assignment.user_name)}${assignment.completed ? ' ✅' : ''}
+                                    </label>
+                                </div>
+                            `;
+                        }
+                    });
+                    assignmentHtml += '</div>';
+                }
+
+                let actions = '';
+                if (chore.assigned_to_all) {
+                    // General chore - show complete checkbox
+                    if (isAdmin || !isCompleted) {
+                        const checkboxId = `chore-${chore.id}`;
+                        const checked = isCompleted ? 'checked' : '';
+                        actions = `
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="${checkboxId}" ${checked}
+                                    onchange="toggleComplete(${chore.id}, this.checked)">
+                                <label for="${checkboxId}" style="cursor: pointer;">Mark as Complete</label>
+                            </div>
+                        `;
+                    }
+                }
+
+                if (isAdmin) {
+                    actions += `
+                        <button class="btn btn-secondary" onclick="editChore(${chore.id})" style="padding: 10px 20px;">✏️ Edit</button>
+                        <button class="btn btn-danger" onclick="deleteChore(${chore.id})" style="padding: 10px 20px;">🗑️ Delete</button>
+                    `;
+                }
+
+                return `
+                    <div class="chore-card ${completedClass} ${priorityClass}">
+                        <div class="chore-header">
+                            <div class="chore-title">${escapeHtml(chore.title)}</div>
+                            <div class="chore-badges">
+                                ${recurrenceBadge}
+                                ${chore.assigned_to_all ? '<span class="badge">👥 Everyone</span>' : '<span class="badge">👤 Assigned</span>'}
+                            </div>
+                        </div>
+                        ${chore.description ? `<div class="chore-description">${escapeHtml(chore.description)}</div>` : ''}
+                        ${completedBy}
+                        ${assignmentHtml}
+                        <div class="chore-actions">
+                            ${actions}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle complete
+        async function toggleComplete(choreId, completed) {
+            try {
+                await fetch(`/api/chores/${choreId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        completed: completed,
+                        completed_by: completed ? currentUser.id : null
+                    })
+                });
+                
+                if (completed) {
+                    showConfetti();
+                    playSound();
+                }
+                
+                loadChores();
+                loadLeaderboard();
+            } catch (error) {
+                console.error('Error updating chore:', error);
+                alert('Failed to update chore.');
+            }
+        }
+
+        // Complete assignment
+        async function completeAssignment(assignmentId, completed) {
+            try {
+                await fetch(`/api/chores/assignment/${assignmentId}/complete`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: completed })
+                });
+                
+                if (completed) {
+                    showConfetti();
+                    playSound();
+                }
+                
+                loadChores();
+                loadLeaderboard();
+            } catch (error) {
+                console.error('Error completing assignment:', error);
+                alert('Failed to complete assignment.');
+            }
+        }
+
+        // Load leaderboard
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const leaderboard = await response.json();
+                renderLeaderboard(leaderboard);
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+            }
+        }
+
+        // Render leaderboard
+        function renderLeaderboard(leaderboard) {
+            const grid = document.getElementById('leaderboardGrid');
+            
+            grid.innerHTML = leaderboard.map((entry, index) => {
+                const rank = index + 1;
+                const rankClass = `rank-${rank}`;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                const avatar = entry.avatar || '👤';
+                const color = entry.color || '#6366f1';
+                
+                return `
+                    <div class="leaderboard-item ${rankClass}" onclick="showUserHistory(${entry.id}, '${escapeHtml(entry.name)}')">
+                        <div class="leaderboard-rank">${medal || rank}</div>
+                        <div class="leaderboard-avatar" style="background: ${color};">${avatar}</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-name">${escapeHtml(entry.name)}</div>
+                        </div>
+                        <div class="leaderboard-points">${entry.points} <span style="font-size: 0.6em;">⭐</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Show user history
+        async function showUserHistory(userId, userName) {
+            try {
+                const response = await fetch(`/api/users/${userId}/history`);
+                const history = await response.json();
+                
+                const modal = document.getElementById('historyModal');
+                document.getElementById('historyModalTitle').textContent = `🎉 ${userName}'s Completed Chores`;
+                
+                const list = document.getElementById('historyList');
+                if (history.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No completed chores this week yet!</p>';
+                } else {
+                    list.innerHTML = history.map(item => `
+                        <div style="padding: 15px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 15px; margin-bottom: 10px;">
+                            ✅ ${escapeHtml(item.title)}
+                        </div>
+                    `).join('');
+                }
+                
+                modal.style.display = 'block';
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        // Profile customization
+        function openProfileModal() {
+            const modal = document.getElementById('profileModal');
+            
+            // Render avatars
+            const avatarPicker = document.getElementById('avatarPicker');
+            avatarPicker.innerHTML = avatars.map(avatar => {
+                const selected = avatar === currentUser.avatar ? 'selected' : '';
+                return `<div class="avatar-option ${selected}" onclick="selectAvatar('${avatar}')">${avatar}</div>`;
+            }).join('');
+            
+            // Render colors
+            const colorPicker = document.getElementById('colorPicker');
+            colorPicker.innerHTML = colors.map(color => {
+                const selected = color === currentUser.color ? 'selected' : '';
+                return `<div class="color-option ${selected}" style="background: ${color};" onclick="selectColor('${color}')"></div>`;
+            }).join('');
+            
+            modal.style.display = 'block';
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').style.display = 'none';
+        }
+
+        function selectAvatar(avatar) {
+            currentUser.avatar = avatar;
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        function selectColor(color) {
+            currentUser.color = color;
+            document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        async function saveProfile() {
+            try {
+                const response = await fetch(`/api/users/${currentUser.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        avatar: currentUser.avatar,
+                        color: currentUser.color
+                    })
+                });
+                
+                const updatedUser = await response.json();
+                
+                // Update UI
+                document.getElementById('currentPlayerAvatar').textContent = updatedUser.avatar;
+                document.getElementById('currentPlayerDisplay').style.background = updatedUser.color;
+                
+                // Update users array
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    users[userIndex] = updatedUser;
+                }
+                
+                closeProfileModal();
+                loadLeaderboard();
+                showConfetti();
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('Failed to save profile.');
+            }
+        }
+
+        // Chore modal
+        function openAddChoreModal() {
+            editingChoreId = null;
+            document.getElementById('choreModalTitle').textContent = '➕ Add New Chore';
+            document.getElementById('choreForm').reset();
+            document.getElementById('assignToAll').checked = true;
+            toggleAssignments();
+            document.getElementById('choreModal').style.display = 'block';
+        }
+
+        function editChore(choreId) {
+            const chore = chores.find(c => c.id === choreId);
+            if (!chore) return;
+            
+            editingChoreId = choreId;
+            document.getElementById('choreModalTitle').textContent = '✏️ Edit Chore';
+            document.getElementById('title').value = chore.title;
+            document.getElementById('description').value = chore.description || '';
+            document.getElementById('priority').value = chore.priority;
+            document.getElementById('recurrenceType').value = chore.recurrence_type;
+            document.getElementById('assignToAll').checked = chore.assigned_to_all;
+            
+            toggleAssignments();
+            
+            if (!chore.assigned_to_all && chore.assignments) {
+                const assignedUserIds = chore.assignments.map(a => a.user_id);
+                document.querySelectorAll('.assignment-checkbox').forEach(checkbox => {
+                    checkbox.checked = assignedUserIds.includes(parseInt(checkbox.value));
+                });
+            }
+            
+            document.getElementById('choreModal').style.display = 'block';
+        }
+
+        function closeChoreModal() {
+            document.getElementById('choreModal').style.display = 'none';
+            editingChoreId = null;
+        }
 
         function toggleAssignments() {
             const assignToAll = document.getElementById('assignToAll').checked;
@@ -628,384 +1268,116 @@
             if (!assignToAll && !document.getElementById('assignmentCheckboxes').innerHTML) {
                 // Populate checkboxes for ALL users (including admins)
                 document.getElementById('assignmentCheckboxes').innerHTML = users.map(u => `
-                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
-                        <input type="checkbox" value="${u.id}" class="assignment-checkbox" style="width: auto; margin-right: 8px;">
+                    <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                        <input type="checkbox" value="${u.id}" class="assignment-checkbox" style="width: auto; margin-right: 10px;">
                         <span>${escapeHtml(u.name)}${u.role === 'admin' ? ' (Admin)' : ''}</span>
                     </label>
                 `).join('');
             }
         }
 
-        function selectPlayer(userId) {
-            currentUser = users.find(u => u.id === userId);
-            if (!currentUser) return;
-
-            // Hide player selection, show main app
-            document.getElementById('playerSelection').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-
-            // Update user info
-            document.getElementById('currentUserName').textContent = currentUser.name;
-
-            // Show/hide admin features
-            if (currentUser.role === 'admin') {
-                document.getElementById('addChoreSection').classList.remove('hidden');
-            } else {
-                document.getElementById('addChoreSection').classList.add('hidden');
-            }
-
-            // Setup event listeners only once
-            if (!eventListenersSetup) {
-                setupEventListeners();
-                eventListenersSetup = true;
-            }
-
-            // Load data
-            loadAll();
-        }
-
-        function logout() {
-            currentUser = null;
-            document.getElementById('mainApp').style.display = 'none';
-            document.getElementById('playerSelection').style.display = 'flex';
-        }
-
-        function setupEventListeners() {
-            // Add chore form
-            document.getElementById('addChoreForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await addChore();
-            });
-
-            // Edit chore form
-            document.getElementById('editChoreForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await updateChore();
-            });
-
-            // Close modal on background click
-            window.addEventListener('click', (e) => {
-                if (e.target.id === 'editModal') {
-                    closeModal();
-                }
-            });
-        }
-
-        async function loadAll() {
-            await Promise.all([loadChores(), loadLeaderboard()]);
-        }
-
-        async function loadChores() {
-            try {
-                // Pass current user ID and admin flag
-                const isAdmin = currentUser.role === 'admin';
-                const response = await fetch(`${API_URL}?user_id=${currentUser.id}&is_admin=${isAdmin}`);
-                chores = await response.json();
-                renderChores();
-            } catch (error) {
-                console.error('Error loading chores:', error);
-                document.getElementById('choresList').innerHTML = '<div class="empty-state">Error loading chores</div>';
-            }
-        }
-
-        function renderChores() {
-            const choresList = document.getElementById('choresList');
+        // Handle chore form submission
+        document.getElementById('choreForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            if (chores.length === 0) {
-                choresList.innerHTML = '<div class="empty-state"><h2>No chores yet!</h2></div>';
-                return;
-            }
-
-            const isAdmin = currentUser.role === 'admin';
-
-            choresList.innerHTML = chores.map(chore => {
-                const isAdmin = currentUser.role === 'admin';
-                const completedByUser = chore.completed_by ? users.find(u => u.id === chore.completed_by) : null;
-                const completedByName = completedByUser ? completedByUser.name : null;
-                const recurringBadge = chore.recurrence_type === 'daily' ? '📅' : chore.recurrence_type === 'weekly' ? '🔄' : '⭐';
-                const recurringTitle = chore.recurrence_type === 'daily' ? 'Daily recurring' : chore.recurrence_type === 'weekly' ? 'Weekly recurring' : 'One-time task';
-                
-                // Handle assigned chores
-                let assignmentHTML = '';
-                if (chore.assignments && chore.assignments.length > 0) {
-                    const myAssignment = chore.assignments.find(a => a.user_id === currentUser.id);
-                    const otherAssignments = chore.assignments.filter(a => a.user_id !== currentUser.id);
-                    
-                    if (myAssignment) {
-                        assignmentHTML += `
-                            <div style="margin-bottom: 10px;">
-                                <label class="checkbox-container">
-                                    <input type="checkbox" ${myAssignment.completed ? 'checked' : ''} 
-                                           onchange="completeAssignment(${myAssignment.id}, this.checked)">
-                                    <span>${myAssignment.completed ? 'You completed this!' : 'Complete this'}</span>
-                                </label>
-                            </div>
-                        `;
-                    }
-                    
-                    if (isAdmin && otherAssignments.length > 0) {
-                        assignmentHTML += '<div style="font-size: 0.9em; color: #666; margin-top: 10px;">';
-                        otherAssignments.forEach(a => {
-                            assignmentHTML += `<div>• ${escapeHtml(a.user_name)}: ${a.completed ? '✅ Done' : '⬜ Pending'}</div>`;
-                        });
-                        assignmentHTML += '</div>';
-                    }
-                }
-                
-                return `
-                    <div class="chore-card ${chore.completed ? 'completed' : ''}">
-                        <div class="chore-header">
-                            <div class="chore-title">
-                                <span title="${recurringTitle}" style="font-size: 0.8em; margin-right: 5px;">${recurringBadge}</span>
-                                ${escapeHtml(chore.title)}
-                                ${chore.assignments.length > 0 ? ' <span style="font-size: 0.8em;">(Assigned)</span>' : ''}
-                            </div>
-                            <span class="priority-badge priority-${chore.priority}">${chore.priority.toUpperCase()}</span>
-                        </div>
-                        ${chore.description ? `<div class="chore-description">${escapeHtml(chore.description)}</div>` : ''}
-                        ${completedByName ? `<div class="chore-completed-by">✓ Completed by ${escapeHtml(completedByName)}</div>` : ''}
-                        ${assignmentHTML}
-                        ${chore.assigned_to_all ? `
-                            <div class="chore-footer">
-                                <label class="checkbox-container">
-                                    <input type="checkbox" ${chore.completed ? 'checked' : ''} 
-                                           onchange="toggleComplete(${chore.id}, this.checked)">
-                                    <span>${chore.completed ? 'Completed' : 'Mark as complete'}</span>
-                                </label>
-                                ${isAdmin ? `
-                                    <div class="chore-actions">
-                                        <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
-                                        <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        ` : (isAdmin ? `
-                            <div class="chore-footer">
-                                <div></div>
-                                <div class="chore-actions">
-                                    <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
-                                </div>
-                            </div>
-                        ` : '')}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function addChore() {
-            const form = document.getElementById('addChoreForm');
-            const formData = new FormData(form);
-            const assignToAll = document.getElementById('assignToAll').checked;
-            
-            const chore = {
-                title: formData.get('title'),
-                description: formData.get('description'),
-                priority: formData.get('priority'),
+            const formData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                priority: document.getElementById('priority').value,
                 recurrence_type: document.getElementById('recurrenceType').value,
-                assigned_to_all: assignToAll,
-                assigned_users: []
+                assigned_to_all: document.getElementById('assignToAll').checked
             };
 
-            if (!assignToAll) {
-                const checkboxes = document.querySelectorAll('.assignment-checkbox:checked');
-                chore.assigned_users = Array.from(checkboxes).map(cb => parseInt(cb.value));
-                
-                if (chore.assigned_users.length === 0) {
+            if (!formData.assigned_to_all) {
+                const assignedUsers = Array.from(document.querySelectorAll('.assignment-checkbox:checked')).map(cb => parseInt(cb.value));
+                if (assignedUsers.length === 0) {
                     alert('Please select at least one person to assign this chore to.');
                     return;
                 }
+                formData.assigned_users = assignedUsers;
             }
 
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
+                const url = editingChoreId ? `/api/chores/${editingChoreId}` : '/api/chores';
+                const method = editingChoreId ? 'PUT' : 'POST';
+                
+                await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(chore)
+                    body: JSON.stringify(formData)
                 });
-
-                if (response.ok) {
-                    form.reset();
-                    document.getElementById('recurrenceType').value = 'weekly';
-                    document.getElementById('assignToAll').checked = true;
-                    document.getElementById('userAssignments').style.display = 'none';
-                    await loadChores();
-                }
+                
+                closeChoreModal();
+                loadChores();
+                showConfetti();
             } catch (error) {
-                console.error('Error adding chore:', error);
-                alert('Error adding chore. Please try again.');
+                console.error('Error saving chore:', error);
+                alert('Failed to save chore.');
             }
-        }
+        });
 
-        async function toggleComplete(choreId, completed) {
-            try {
-                const response = await fetch(`${API_URL}/${choreId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        completed: completed ? 1 : 0,
-                        completed_by: completed ? currentUser.id : null
-                    })
-                });
-
-                if (response.ok) {
-                    await loadAll();
-                }
-            } catch (error) {
-                console.error('Error updating chore:', error);
-                alert('Error updating chore. Please try again.');
-            }
-        }
-
-        async function completeAssignment(assignmentId, completed) {
-            try {
-                const response = await fetch(`/api/chores/assignment/${assignmentId}/complete`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ completed: completed })
-                });
-
-                if (response.ok) {
-                    await loadAll();
-                }
-            } catch (error) {
-                console.error('Error completing assignment:', error);
-                alert('Error completing assignment. Please try again.');
-            }
-        }
-
-        function openEditModal(choreId) {
-            const chore = chores.find(c => c.id === choreId);
-            if (!chore) return;
-
-            document.getElementById('editChoreId').value = chore.id;
-            document.getElementById('editTitle').value = chore.title;
-            document.getElementById('editDescription').value = chore.description || '';
-            document.getElementById('editPriority').value = chore.priority;
-            document.getElementById('editRecurrenceType').value = chore.recurrence_type || 'weekly';
-
-            document.getElementById('editModal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-
-        async function updateChore() {
-            const choreId = document.getElementById('editChoreId').value;
-            const form = document.getElementById('editChoreForm');
-            const formData = new FormData(form);
-
-            const chore = {
-                title: formData.get('title'),
-                description: formData.get('description'),
-                priority: formData.get('priority'),
-                recurrence_type: document.getElementById('editRecurrenceType').value
-            };
-
-            try {
-                const response = await fetch(`${API_URL}/${choreId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(chore)
-                });
-
-                if (response.ok) {
-                    closeModal();
-                    await loadChores();
-                }
-            } catch (error) {
-                console.error('Error updating chore:', error);
-                alert('Error updating chore. Please try again.');
-            }
-        }
-
+        // Delete chore
         async function deleteChore(choreId) {
-            if (!confirm('Are you sure you want to delete this chore?')) {
-                return;
-            }
-
+            if (!confirm('Are you sure you want to delete this chore?')) return;
+            
             try {
-                const response = await fetch(`${API_URL}/${choreId}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    await loadAll();
-                }
+                await fetch(`/api/chores/${choreId}`, { method: 'DELETE' });
+                loadChores();
+                loadLeaderboard();
             } catch (error) {
                 console.error('Error deleting chore:', error);
-                alert('Error deleting chore. Please try again.');
+                alert('Failed to delete chore.');
             }
         }
 
-        async function loadLeaderboard() {
-            try {
-                const response = await fetch(LEADERBOARD_URL);
-                const leaderboard = await response.json();
-                renderLeaderboard(leaderboard);
-            } catch (error) {
-                console.error('Error loading leaderboard:', error);
-                document.getElementById('leaderboardList').innerHTML = '<div style="color: #f44336;">Error loading leaderboard</div>';
+        // Confetti effect
+        function showConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff1493'];
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
             }
         }
 
-        function renderLeaderboard(leaderboard) {
-            const leaderboardList = document.getElementById('leaderboardList');
+        // Play sound (simple beep using Web Audio API)
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
-            if (leaderboard.length === 0) {
-                leaderboardList.innerHTML = '<div style="color: #999; text-align: center;">No data yet!</div>';
-                return;
-            }
-
-            leaderboardList.innerHTML = leaderboard.map((entry, index) => {
-                const rank = index + 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-                const rankClass = `rank-${rank <= 3 ? rank : ''}`;
-                
-                return `
-                    <div class="leaderboard-item ${rankClass}" style="cursor: pointer;" onclick="showUserHistory(${entry.id}, '${escapeHtml(entry.name)}')">
-                        <div class="leaderboard-rank">${medal || rank}</div>
-                        <div class="leaderboard-name">${escapeHtml(entry.name)}</div>
-                        <div class="leaderboard-points">${entry.points} pts</div>
-                    </div>
-                `;
-            }).join('');
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
         }
 
-        async function showUserHistory(userId, userName) {
-            try {
-                const response = await fetch(`/api/users/${userId}/history`);
-                const history = await response.json();
-                
-                const modal = document.getElementById('historyModal');
-                document.getElementById('historyUserName').textContent = userName;
-                
-                const historyList = document.getElementById('historyList');
-                if (history.length === 0) {
-                    historyList.innerHTML = '<p style="color: #999; text-align: center;">No chores completed this week yet!</p>';
-                } else {
-                    historyList.innerHTML = history.map(item => `
-                        <div style="padding: 10px; background: #f5f5f5; border-radius: 8px; margin-bottom: 8px;">
-                            ✓ ${escapeHtml(item.title)}
-                        </div>
-                    `).join('');
-                }
-                
-                modal.style.display = 'block';
-            } catch (error) {
-                console.error('Error loading history:', error);
-                alert('Error loading completion history.');
-            }
-        }
-
-        function closeHistoryModal() {
-            document.getElementById('historyModal').style.display = 'none';
-        }
-
+        // Utility
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
         }
     </script>
 </body>

@@ -34,9 +34,22 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 role TEXT NOT NULL CHECK(role IN ('admin', 'standard')),
+                avatar TEXT DEFAULT '👤',
+                color TEXT DEFAULT '#6366f1',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Add avatar and color columns if they don't exist (for existing databases)
+        try:
+            conn.execute('ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT "👤"')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        try:
+            conn.execute('ALTER TABLE users ADD COLUMN color TEXT DEFAULT "#6366f1"')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         
         # Seed default users if table is empty
         count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
@@ -415,6 +428,29 @@ def get_users():
     
     return jsonify([dict(user) for user in users])
 
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    """Update user preferences (avatar, color)."""
+    data = request.get_json()
+    avatar = data.get('avatar')
+    color = data.get('color')
+    
+    conn = get_db_connection()
+    
+    # Update only provided fields
+    if avatar is not None:
+        conn.execute('UPDATE users SET avatar = ? WHERE id = ?', (avatar, user_id))
+    if color is not None:
+        conn.execute('UPDATE users SET color = ? WHERE id = ?', (color, user_id))
+    
+    conn.commit()
+    
+    # Fetch updated user
+    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    conn.close()
+    
+    return jsonify(dict(user))
+
 @app.route('/api/chores/assignment/<int:assignment_id>/complete', methods=['PUT'])
 def complete_assignment():
     """Mark a chore assignment as complete."""
@@ -444,6 +480,8 @@ def get_leaderboard():
             u.id,
             u.name,
             u.role,
+            u.avatar,
+            u.color,
             (
                 SELECT COUNT(*) FROM chores c 
                 WHERE c.completed_by = u.id AND c.completed = 1
