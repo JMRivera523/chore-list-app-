@@ -1068,8 +1068,7 @@
                             // Prevent unchecking unless admin
                             const onclick = assignment.completed && !isAdmin ? 'return false;' : '';
                             
-                            const splitBtn = (!assignment.completed && isCurrentUser) ? 
-                                `<button class="btn btn-secondary" onclick="openSplitModal(${assignment.id}, '${escapeHtml(chore.title).replace(/'/g, "\\'")}')" style="padding: 8px 15px; font-size: 0.85em; margin-left: 10px;">🤝 Split</button>` : '';
+                            // NO split button for manually assigned tasks - admin chose who should do it
                             
                             assignmentHtml += `
                                 <div style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -1081,7 +1080,6 @@
                                             ${escapeHtml(assignment.user_name)}${assignment.completed ? ' ✅' : ''}
                                         </label>
                                     </div>
-                                    ${splitBtn}
                                 </div>
                             `;
                         }

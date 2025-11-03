@@ -669,21 +669,23 @@ def adjust_user_points(user_id):
     
     conn = get_db_connection()
     
-    # Add to all-time points
-    conn.execute('''
-        INSERT INTO all_time_points (user_id, points, reason)
-        VALUES (?, ?, ?)
-    ''', (user_id, points, reason))
+    # For positive adjustments, create a special completed chore for weekly display
+    # For negative adjustments, just add to all-time (can't remove from weekly easily)
+    if points > 0:
+        # Create a completed "bonus" chore for weekly leaderboard
+        conn.execute('''
+            INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all, completed, completed_by)
+            VALUES (?, ?, 'medium', ?, 'one-time', 0, 1, ?)
+        ''', (f"⭐ {reason}", f"Bonus points from admin", points, user_id))
     
-    # Create a special "bonus/penalty" chore for weekly leaderboard
-    # This makes the adjustment appear in the current week's points
-    cursor = conn.execute('''
-        INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all, completed, completed_by)
-        VALUES (?, ?, 'medium', ?, 'one-time', 0, 1, ?)
-    ''', (reason, f"Admin adjustment: {'+' if points > 0 else ''}{points} points", abs(points) if points > 0 else 1, user_id if points > 0 else None))
-    
-    # For negative points, we can't easily remove from weekly, so just note it in all-time
-    # The all-time will show the negative adjustment
+    # Always add to all-time points (this is separate from weekly)
+    # Note: We don't add positive adjustments here because they're already in weekly chores
+    # Only add negative adjustments or track for history
+    if points < 0:
+        conn.execute('''
+            INSERT INTO all_time_points (user_id, points, reason)
+            VALUES (?, ?, ?)
+        ''', (user_id, points, reason))
     
     conn.commit()
     conn.close()
@@ -737,7 +739,7 @@ def split_general_chore(chore_id):
     
     return jsonify({
         'success': True,
-        'message': f'Task split! Both users will earn {chore["points"]} points when completed.'
+        'message': f'✅ Task split! You AND the other player will EACH get the FULL {chore["points"]} points when completed. Not divided - full points for both! (Total: {chore["points"] * 2} points awarded)'
     })
 
 @app.route('/api/chores/assignment/<int:assignment_id>/split', methods=['POST'])
@@ -789,7 +791,7 @@ def split_assignment(assignment_id):
     
     return jsonify({
         'success': True,
-        'message': f'Task split! Both users will earn {chore["points"]} points when completed.'
+        'message': f'✅ Task split! You AND the other player will EACH get the FULL {chore["points"]} points when completed. Not divided - full points for both! (Total: {chore["points"] * 2} points awarded)'
     })
 
 if __name__ == '__main__':
