@@ -495,8 +495,18 @@
                 <div class="form-group">
                     <label style="display: flex; align-items: center; cursor: pointer;">
                         <input type="checkbox" id="isRecurring" name="isRecurring" checked style="width: auto; margin-right: 10px;">
-                        <span>Daily recurring (resets at midnight)</span>
+                        <span>Weekly recurring (resets Monday morning)</span>
                     </label>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="assignToAll" name="assignToAll" checked onchange="toggleAssignments()" style="width: auto; margin-right: 10px;">
+                        <span>Everyone can complete (general chore)</span>
+                    </label>
+                    <div id="userAssignments" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                        <p style="margin-bottom: 10px; font-weight: 600;">Assign to:</p>
+                        <div id="assignmentCheckboxes"></div>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Add Chore</button>
             </form>
@@ -547,11 +557,23 @@
                 <div class="form-group">
                     <label style="display: flex; align-items: center; cursor: pointer;">
                         <input type="checkbox" id="editIsRecurring" name="isRecurring" style="width: auto; margin-right: 10px;">
-                        <span>Daily recurring (resets at midnight)</span>
+                        <span>Weekly recurring (resets Monday morning)</span>
                     </label>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Chore</button>
             </form>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="historyUserName"></h2>
+                <span class="close" onclick="closeHistoryModal()">&times;</span>
+            </div>
+            <h3 style="margin-bottom: 15px; color: #667eea;">Completed This Week:</h3>
+            <div id="historyList"></div>
         </div>
     </div>
 
@@ -593,6 +615,23 @@
         }
 
         let eventListenersSetup = false;
+
+        function toggleAssignments() {
+            const assignToAll = document.getElementById('assignToAll').checked;
+            const assignmentsDiv = document.getElementById('userAssignments');
+            assignmentsDiv.style.display = assignToAll ? 'none' : 'block';
+            
+            if (!assignToAll && !document.getElementById('assignmentCheckboxes').innerHTML) {
+                // Populate checkboxes for non-admin users
+                const nonAdminUsers = users.filter(u => u.role !== 'admin');
+                document.getElementById('assignmentCheckboxes').innerHTML = nonAdminUsers.map(u => `
+                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                        <input type="checkbox" value="${u.id}" class="assignment-checkbox" style="width: auto; margin-right: 8px;">
+                        <span>${escapeHtml(u.name)}</span>
+                    </label>
+                `).join('');
+            }
+        }
 
         function selectPlayer(userId) {
             currentUser = users.find(u => u.id === userId);
@@ -655,8 +694,9 @@
 
         async function loadChores() {
             try {
-                // Pass current user ID to filter chores
-                const response = await fetch(`${API_URL}?user_id=${currentUser.id}`);
+                // Pass current user ID and admin flag
+                const isAdmin = currentUser.role === 'admin';
+                const response = await fetch(`${API_URL}?user_id=${currentUser.id}&is_admin=${isAdmin}`);
                 chores = await response.json();
                 renderChores();
             } catch (error) {
@@ -676,11 +716,38 @@
             const isAdmin = currentUser.role === 'admin';
 
             choresList.innerHTML = chores.map(chore => {
+                const isAdmin = currentUser.role === 'admin';
                 const completedByUser = chore.completed_by ? users.find(u => u.id === chore.completed_by) : null;
                 const completedByName = completedByUser ? completedByUser.name : null;
-
                 const recurringBadge = chore.is_recurring ? '🔄' : '⭐';
-                const recurringTitle = chore.is_recurring ? 'Daily recurring' : 'One-time task';
+                const recurringTitle = chore.is_recurring ? 'Weekly recurring' : 'One-time task';
+                
+                // Handle assigned chores
+                let assignmentHTML = '';
+                if (chore.assignments && chore.assignments.length > 0) {
+                    const myAssignment = chore.assignments.find(a => a.user_id === currentUser.id);
+                    const otherAssignments = chore.assignments.filter(a => a.user_id !== currentUser.id);
+                    
+                    if (myAssignment) {
+                        assignmentHTML += `
+                            <div style="margin-bottom: 10px;">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" ${myAssignment.completed ? 'checked' : ''} 
+                                           onchange="completeAssignment(${myAssignment.id}, this.checked)">
+                                    <span>${myAssignment.completed ? 'You completed this!' : 'Complete this'}</span>
+                                </label>
+                            </div>
+                        `;
+                    }
+                    
+                    if (isAdmin && otherAssignments.length > 0) {
+                        assignmentHTML += '<div style="font-size: 0.9em; color: #666; margin-top: 10px;">';
+                        otherAssignments.forEach(a => {
+                            assignmentHTML += `<div>• ${escapeHtml(a.user_name)}: ${a.completed ? '✅ Done' : '⬜ Pending'}</div>`;
+                        });
+                        assignmentHTML += '</div>';
+                    }
+                }
                 
                 return `
                     <div class="chore-card ${chore.completed ? 'completed' : ''}">
@@ -688,24 +755,35 @@
                             <div class="chore-title">
                                 <span title="${recurringTitle}" style="font-size: 0.8em; margin-right: 5px;">${recurringBadge}</span>
                                 ${escapeHtml(chore.title)}
+                                ${chore.assignments.length > 0 ? ' <span style="font-size: 0.8em;">(Assigned)</span>' : ''}
                             </div>
                             <span class="priority-badge priority-${chore.priority}">${chore.priority.toUpperCase()}</span>
                         </div>
                         ${chore.description ? `<div class="chore-description">${escapeHtml(chore.description)}</div>` : ''}
                         ${completedByName ? `<div class="chore-completed-by">✓ Completed by ${escapeHtml(completedByName)}</div>` : ''}
-                        <div class="chore-footer">
-                            <label class="checkbox-container">
-                                <input type="checkbox" ${chore.completed ? 'checked' : ''} 
-                                       onchange="toggleComplete(${chore.id}, this.checked)">
-                                <span>${chore.completed ? 'Completed' : 'Mark as complete'}</span>
-                            </label>
-                            ${isAdmin ? `
+                        ${assignmentHTML}
+                        ${chore.assigned_to_all ? `
+                            <div class="chore-footer">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" ${chore.completed ? 'checked' : ''} 
+                                           onchange="toggleComplete(${chore.id}, this.checked)">
+                                    <span>${chore.completed ? 'Completed' : 'Mark as complete'}</span>
+                                </label>
+                                ${isAdmin ? `
+                                    <div class="chore-actions">
+                                        <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
+                                        <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : (isAdmin ? `
+                            <div class="chore-footer">
+                                <div></div>
                                 <div class="chore-actions">
-                                    <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
                                     <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
                                 </div>
-                            ` : ''}
-                        </div>
+                            </div>
+                        ` : '')}
                     </div>
                 `;
             }).join('');
@@ -714,13 +792,26 @@
         async function addChore() {
             const form = document.getElementById('addChoreForm');
             const formData = new FormData(form);
+            const assignToAll = document.getElementById('assignToAll').checked;
             
             const chore = {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 priority: formData.get('priority'),
-                is_recurring: document.getElementById('isRecurring').checked
+                is_recurring: document.getElementById('isRecurring').checked,
+                assigned_to_all: assignToAll,
+                assigned_users: []
             };
+
+            if (!assignToAll) {
+                const checkboxes = document.querySelectorAll('.assignment-checkbox:checked');
+                chore.assigned_users = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                
+                if (chore.assigned_users.length === 0) {
+                    alert('Please select at least one person to assign this chore to.');
+                    return;
+                }
+            }
 
             try {
                 const response = await fetch(API_URL, {
@@ -731,8 +822,9 @@
 
                 if (response.ok) {
                     form.reset();
-                    // Reset checkbox to checked by default
                     document.getElementById('isRecurring').checked = true;
+                    document.getElementById('assignToAll').checked = true;
+                    document.getElementById('userAssignments').style.display = 'none';
                     await loadChores();
                 }
             } catch (error) {
@@ -758,6 +850,23 @@
             } catch (error) {
                 console.error('Error updating chore:', error);
                 alert('Error updating chore. Please try again.');
+            }
+        }
+
+        async function completeAssignment(assignmentId, completed) {
+            try {
+                const response = await fetch(`/api/chores/assignment/${assignmentId}/complete`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: completed })
+                });
+
+                if (response.ok) {
+                    await loadAll();
+                }
+            } catch (error) {
+                console.error('Error completing assignment:', error);
+                alert('Error completing assignment. Please try again.');
             }
         }
 
@@ -851,13 +960,43 @@
                 const rankClass = `rank-${rank <= 3 ? rank : ''}`;
                 
                 return `
-                    <div class="leaderboard-item ${rankClass}">
+                    <div class="leaderboard-item ${rankClass}" style="cursor: pointer;" onclick="showUserHistory(${entry.id}, '${escapeHtml(entry.name)}')">
                         <div class="leaderboard-rank">${medal || rank}</div>
                         <div class="leaderboard-name">${escapeHtml(entry.name)}</div>
                         <div class="leaderboard-points">${entry.points} pts</div>
                     </div>
                 `;
             }).join('');
+        }
+
+        async function showUserHistory(userId, userName) {
+            try {
+                const response = await fetch(`/api/users/${userId}/history`);
+                const history = await response.json();
+                
+                const modal = document.getElementById('historyModal');
+                document.getElementById('historyUserName').textContent = userName;
+                
+                const historyList = document.getElementById('historyList');
+                if (history.length === 0) {
+                    historyList.innerHTML = '<p style="color: #999; text-align: center;">No chores completed this week yet!</p>';
+                } else {
+                    historyList.innerHTML = history.map(item => `
+                        <div style="padding: 10px; background: #f5f5f5; border-radius: 8px; margin-bottom: 8px;">
+                            ✓ ${escapeHtml(item.title)}
+                        </div>
+                    `).join('');
+                }
+                
+                modal.style.display = 'block';
+            } catch (error) {
+                console.error('Error loading history:', error);
+                alert('Error loading completion history.');
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').style.display = 'none';
         }
 
         function escapeHtml(text) {
