@@ -674,23 +674,18 @@ def adjust_user_points(user_id):
     
     conn = get_db_connection()
     
-    # For positive adjustments, create a special completed chore for weekly display
-    # For negative adjustments, just add to all-time (can't remove from weekly easily)
-    if points > 0:
-        # Create a completed "bonus" chore for weekly leaderboard
-        conn.execute('''
-            INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all, completed, completed_by)
-            VALUES (?, ?, 'medium', ?, 'one-time', 0, 1, ?)
-        ''', (f"⭐ {reason}", f"Bonus points from admin", points, user_id))
+    # Create a special completed chore for weekly display (works for both + and -)
+    # Positive = bonus chore, Negative = penalty chore
+    title = f"⭐ {reason}" if points > 0 else f"⚠️ {reason}"
+    description = f"Admin {'bonus' if points > 0 else 'penalty'}: {'+' if points > 0 else ''}{points} points"
     
-    # Always add to all-time points (this is separate from weekly)
-    # Note: We don't add positive adjustments here because they're already in weekly chores
-    # Only add negative adjustments or track for history
-    if points < 0:
-        conn.execute('''
-            INSERT INTO all_time_points (user_id, points, reason)
-            VALUES (?, ?, ?)
-        ''', (user_id, points, reason))
+    conn.execute('''
+        INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all, completed, completed_by)
+        VALUES (?, ?, 'medium', ?, 'one-time', 0, 1, ?)
+    ''', (title, description, points, user_id))
+    
+    # Note: We don't add to all_time_points table here because the chore above
+    # will automatically be counted in all-time leaderboard (it sums weekly + historical)
     
     conn.commit()
     conn.close()
