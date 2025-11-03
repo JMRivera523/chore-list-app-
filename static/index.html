@@ -493,10 +493,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="isRecurring" name="isRecurring" checked style="width: auto; margin-right: 10px;">
-                        <span>Weekly recurring (resets Monday morning)</span>
-                    </label>
+                    <label for="recurrenceType">Recurrence</label>
+                    <select id="recurrenceType" name="recurrenceType">
+                        <option value="daily">Daily (resets every morning)</option>
+                        <option value="weekly" selected>Weekly (resets Monday morning)</option>
+                        <option value="one-time">One-time (never resets)</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label style="display: flex; align-items: center; cursor: pointer;">
@@ -555,10 +557,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="editIsRecurring" name="isRecurring" style="width: auto; margin-right: 10px;">
-                        <span>Weekly recurring (resets Monday morning)</span>
-                    </label>
+                    <label for="editRecurrenceType">Recurrence</label>
+                    <select id="editRecurrenceType" name="recurrenceType">
+                        <option value="daily">Daily (resets every morning)</option>
+                        <option value="weekly">Weekly (resets Monday morning)</option>
+                        <option value="one-time">One-time (never resets)</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Chore</button>
             </form>
@@ -622,12 +626,11 @@
             assignmentsDiv.style.display = assignToAll ? 'none' : 'block';
             
             if (!assignToAll && !document.getElementById('assignmentCheckboxes').innerHTML) {
-                // Populate checkboxes for non-admin users
-                const nonAdminUsers = users.filter(u => u.role !== 'admin');
-                document.getElementById('assignmentCheckboxes').innerHTML = nonAdminUsers.map(u => `
+                // Populate checkboxes for ALL users (including admins)
+                document.getElementById('assignmentCheckboxes').innerHTML = users.map(u => `
                     <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
                         <input type="checkbox" value="${u.id}" class="assignment-checkbox" style="width: auto; margin-right: 8px;">
-                        <span>${escapeHtml(u.name)}</span>
+                        <span>${escapeHtml(u.name)}${u.role === 'admin' ? ' (Admin)' : ''}</span>
                     </label>
                 `).join('');
             }
@@ -719,8 +722,8 @@
                 const isAdmin = currentUser.role === 'admin';
                 const completedByUser = chore.completed_by ? users.find(u => u.id === chore.completed_by) : null;
                 const completedByName = completedByUser ? completedByUser.name : null;
-                const recurringBadge = chore.is_recurring ? '🔄' : '⭐';
-                const recurringTitle = chore.is_recurring ? 'Weekly recurring' : 'One-time task';
+                const recurringBadge = chore.recurrence_type === 'daily' ? '📅' : chore.recurrence_type === 'weekly' ? '🔄' : '⭐';
+                const recurringTitle = chore.recurrence_type === 'daily' ? 'Daily recurring' : chore.recurrence_type === 'weekly' ? 'Weekly recurring' : 'One-time task';
                 
                 // Handle assigned chores
                 let assignmentHTML = '';
@@ -798,7 +801,7 @@
                 title: formData.get('title'),
                 description: formData.get('description'),
                 priority: formData.get('priority'),
-                is_recurring: document.getElementById('isRecurring').checked,
+                recurrence_type: document.getElementById('recurrenceType').value,
                 assigned_to_all: assignToAll,
                 assigned_users: []
             };
@@ -822,7 +825,7 @@
 
                 if (response.ok) {
                     form.reset();
-                    document.getElementById('isRecurring').checked = true;
+                    document.getElementById('recurrenceType').value = 'weekly';
                     document.getElementById('assignToAll').checked = true;
                     document.getElementById('userAssignments').style.display = 'none';
                     await loadChores();
@@ -878,7 +881,7 @@
             document.getElementById('editTitle').value = chore.title;
             document.getElementById('editDescription').value = chore.description || '';
             document.getElementById('editPriority').value = chore.priority;
-            document.getElementById('editIsRecurring').checked = chore.is_recurring;
+            document.getElementById('editRecurrenceType').value = chore.recurrence_type || 'weekly';
 
             document.getElementById('editModal').style.display = 'block';
         }
@@ -896,7 +899,7 @@
                 title: formData.get('title'),
                 description: formData.get('description'),
                 priority: formData.get('priority'),
-                is_recurring: document.getElementById('editIsRecurring').checked
+                recurrence_type: document.getElementById('editRecurrenceType').value
             };
 
             try {

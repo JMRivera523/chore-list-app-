@@ -58,7 +58,7 @@ def init_db():
                 description TEXT,
                 completed BOOLEAN NOT NULL DEFAULT 0,
                 priority TEXT DEFAULT 'medium',
-                is_recurring BOOLEAN NOT NULL DEFAULT 1,
+                recurrence_type TEXT DEFAULT 'weekly' CHECK(recurrence_type IN ('daily', 'weekly', 'one-time')),
                 assigned_to_all BOOLEAN NOT NULL DEFAULT 1,
                 completed_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +110,11 @@ def init_db():
             INSERT OR IGNORE INTO settings (key, value) VALUES ('last_reset_week', ?)
         ''', (monday.isoformat(),))
         
+        # Initialize last daily reset date
+        conn.execute('''
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('last_reset_date', ?)
+        ''', (today.isoformat(),))
+        
         conn.commit()
         conn.close()
     except Exception as e:
@@ -119,71 +124,120 @@ def init_db():
 # Initialize database when the app starts (works with gunicorn)
 initialize_database()
 
-def check_and_reset_weekly():
-    """Check if it's a new week (Monday) and reset recurring chores if needed."""
+def check_and_reset_chores():
+    """Check if it's a new day/week and reset chores accordingly."""
     try:
         conn = get_db_connection()
-        
-        # Get last reset week (Monday)
-        result = conn.execute("SELECT value FROM settings WHERE key = 'last_reset_week'").fetchone()
-        last_reset_week = result['value'] if result else None
-        
-        # Get current week's Monday
         today = datetime.now().date()
+        today_str = today.isoformat()
+        
+        # Check for daily reset
+        last_reset_date = conn.execute("SELECT value FROM settings WHERE key = 'last_reset_date'").fetchone()
+        last_reset_date_str = last_reset_date['value'] if last_reset_date else None
+        
+        if last_reset_date_str != today_str:
+            print(f"New day detected! Resetting daily chores. Last reset: {last_reset_date_str}, Today: {today_str}")
+            
+            # Save daily chore completions to history
+            daily_completed = conn.execute('''
+                SELECT id, completed_by FROM chores 
+                WHERE completed = 1 AND completed_by IS NOT NULL AND recurrence_type = 'daily'
+            ''').fetchall()
+            
+            days_since_monday = today.weekday()
+            this_monday = today - timedelta(days=days_since_monday)
+            
+            for chore in daily_completed:
+                conn.execute('''
+                    INSERT INTO completion_history (chore_id, user_id, completed_at, week_start_date)
+                    VALUES (?, ?, datetime('now', '-1 day'), ?)
+                ''', (chore['id'], chore['completed_by'], this_monday.isoformat()))
+            
+            # Reset daily chores
+            conn.execute('''
+                UPDATE chores 
+                SET completed = 0, completed_by = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE recurrence_type = 'daily'
+            ''')
+            
+            # Reset daily assigned chore completions
+            daily_assignments = conn.execute('''
+                SELECT ca.chore_id, ca.user_id FROM chore_assignments ca
+                JOIN chores c ON ca.chore_id = c.id
+                WHERE ca.completed = 1 AND c.recurrence_type = 'daily'
+            ''').fetchall()
+            
+            for assignment in daily_assignments:
+                conn.execute('''
+                    INSERT INTO completion_history (chore_id, user_id, completed_at, week_start_date)
+                    VALUES (?, ?, datetime('now', '-1 day'), ?)
+                ''', (assignment['chore_id'], assignment['user_id'], this_monday.isoformat()))
+            
+            conn.execute('''
+                UPDATE chore_assignments 
+                SET completed = 0, completed_at = NULL
+                WHERE chore_id IN (SELECT id FROM chores WHERE recurrence_type = 'daily')
+            ''')
+            
+            conn.execute("UPDATE settings SET value = ? WHERE key = 'last_reset_date'", (today_str,))
+            print(f"Reset {len(daily_completed)} daily chores and {len(daily_assignments)} daily assignments")
+        
+        # Check for weekly reset (Monday)
+        last_reset_week = conn.execute("SELECT value FROM settings WHERE key = 'last_reset_week'").fetchone()
+        last_reset_week_str = last_reset_week['value'] if last_reset_week else None
+        
         days_since_monday = today.weekday()
         this_monday = today - timedelta(days=days_since_monday)
         this_monday_str = this_monday.isoformat()
         
-        # If it's a new week (past Sunday night), reset
-        if last_reset_week != this_monday_str:
-            print(f"New week detected! Resetting for week starting: {this_monday_str}")
+        if last_reset_week_str != this_monday_str:
+            print(f"New week detected! Resetting weekly chores for week starting: {this_monday_str}")
             
-            # Save completion history for all completed chores from last week
-            completed_chores = conn.execute('''
+            # Save weekly chore completions
+            weekly_completed = conn.execute('''
                 SELECT id, completed_by FROM chores 
-                WHERE completed = 1 AND completed_by IS NOT NULL
+                WHERE completed = 1 AND completed_by IS NOT NULL AND recurrence_type = 'weekly'
             ''').fetchall()
             
-            for chore in completed_chores:
+            for chore in weekly_completed:
                 conn.execute('''
                     INSERT INTO completion_history (chore_id, user_id, completed_at, week_start_date)
                     VALUES (?, ?, datetime('now'), ?)
-                ''', (chore['id'], chore['completed_by'], last_reset_week or this_monday_str))
+                ''', (chore['id'], chore['completed_by'], last_reset_week_str or this_monday_str))
             
-            # Save assigned chore completions
-            assigned_completions = conn.execute('''
-                SELECT chore_id, user_id FROM chore_assignments 
-                WHERE completed = 1
-            ''').fetchall()
-            
-            for assignment in assigned_completions:
-                conn.execute('''
-                    INSERT INTO completion_history (chore_id, user_id, completed_at, week_start_date)
-                    VALUES (?, ?, datetime('now'), ?)
-                ''', (assignment['chore_id'], assignment['user_id'], last_reset_week or this_monday_str))
-            
-            # Reset recurring chores
+            # Reset weekly chores
             conn.execute('''
                 UPDATE chores 
                 SET completed = 0, completed_by = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE is_recurring = 1
+                WHERE recurrence_type = 'weekly'
             ''')
             
-            # Reset assigned chore completions
+            # Reset weekly assigned chore completions
+            weekly_assignments = conn.execute('''
+                SELECT ca.chore_id, ca.user_id FROM chore_assignments ca
+                JOIN chores c ON ca.chore_id = c.id
+                WHERE ca.completed = 1 AND c.recurrence_type = 'weekly'
+            ''').fetchall()
+            
+            for assignment in weekly_assignments:
+                conn.execute('''
+                    INSERT INTO completion_history (chore_id, user_id, completed_at, week_start_date)
+                    VALUES (?, ?, datetime('now'), ?)
+                ''', (assignment['chore_id'], assignment['user_id'], last_reset_week_str or this_monday_str))
+            
             conn.execute('''
                 UPDATE chore_assignments 
                 SET completed = 0, completed_at = NULL
+                WHERE chore_id IN (SELECT id FROM chores WHERE recurrence_type = 'weekly')
             ''')
             
-            # Update last reset week
             conn.execute("UPDATE settings SET value = ? WHERE key = 'last_reset_week'", (this_monday_str,))
-            
-            conn.commit()
-            print(f"Reset {len(completed_chores)} chores and {len(assigned_completions)} assignments for new week")
+            print(f"Reset {len(weekly_completed)} weekly chores and {len(weekly_assignments)} weekly assignments")
         
+        conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error in check_and_reset_weekly: {e}")
+        print(f"Error in check_and_reset_chores: {e}")
 
 @app.route('/')
 def index():
@@ -193,8 +247,8 @@ def index():
 @app.route('/api/chores', methods=['GET'])
 def get_chores():
     """Get chores with assignments."""
-    # Check and reset weekly if it's a new week
-    check_and_reset_weekly()
+    # Check and reset chores (daily and weekly)
+    check_and_reset_chores()
     
     user_id = request.args.get('user_id', type=int)
     is_admin = request.args.get('is_admin', 'false').lower() == 'true'
@@ -257,14 +311,14 @@ def create_chore():
     title = data['title']
     description = data.get('description', '')
     priority = data.get('priority', 'medium')
-    is_recurring = data.get('is_recurring', True)
+    recurrence_type = data.get('recurrence_type', 'weekly')  # daily, weekly, or one-time
     assigned_to_all = data.get('assigned_to_all', True)
     assigned_users = data.get('assigned_users', [])  # List of user IDs
     
     conn = get_db_connection()
     cursor = conn.execute(
-        'INSERT INTO chores (title, description, priority, is_recurring, assigned_to_all) VALUES (?, ?, ?, ?, ?)',
-        (title, description, priority, 1 if is_recurring else 0, 1 if assigned_to_all else 0)
+        'INSERT INTO chores (title, description, priority, recurrence_type, assigned_to_all) VALUES (?, ?, ?, ?, ?)',
+        (title, description, priority, recurrence_type, 1 if assigned_to_all else 0)
     )
     conn.commit()
     chore_id = cursor.lastrowid
@@ -314,7 +368,7 @@ def update_chore(chore_id):
     completed = data.get('completed', chore['completed'])
     priority = data.get('priority', chore['priority'])
     completed_by = data.get('completed_by', chore['completed_by'])
-    is_recurring = data.get('is_recurring', chore['is_recurring'])
+    recurrence_type = data.get('recurrence_type', chore['recurrence_type'])
     
     # If marking as incomplete, clear the completed_by field
     if not completed:
@@ -322,9 +376,9 @@ def update_chore(chore_id):
     
     conn.execute(
         '''UPDATE chores 
-           SET title = ?, description = ?, completed = ?, priority = ?, completed_by = ?, is_recurring = ?, updated_at = CURRENT_TIMESTAMP
+           SET title = ?, description = ?, completed = ?, priority = ?, completed_by = ?, recurrence_type = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ?''',
-        (title, description, completed, priority, completed_by, 1 if is_recurring else 0, chore_id)
+        (title, description, completed, priority, completed_by, recurrence_type, chore_id)
     )
     conn.commit()
     
