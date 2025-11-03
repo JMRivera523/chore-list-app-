@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chore List App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .add-chore-form {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-edit {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            margin-right: 8px;
+        }
+
+        .btn-edit:hover {
+            background: #45a049;
+        }
+
+        .btn-delete {
+            background: #f44336;
+            color: white;
+            padding: 8px 16px;
+        }
+
+        .btn-delete:hover {
+            background: #da190b;
+        }
+
+        .chores-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .chore-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .chore-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .chore-card.completed {
+            opacity: 0.7;
+            background: #f5f5f5;
+        }
+
+        .chore-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .chore-title {
+            font-size: 1.3em;
+            color: #333;
+            flex: 1;
+        }
+
+        .chore-card.completed .chore-title {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .priority-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .priority-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .priority-medium {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .priority-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .chore-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .chore-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .chore-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state h2 {
+            color: #999;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #bbb;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Chore List</h1>
+
+        <!-- Add Chore Form -->
+        <div class="add-chore-form">
+            <h2 style="margin-bottom: 20px; color: #333;">Add New Chore</h2>
+            <form id="addChoreForm">
+                <div class="form-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" name="title" required placeholder="e.g., Wash the dishes">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Additional details about the chore..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Chore</button>
+            </form>
+        </div>
+
+        <!-- Chores List -->
+        <div id="choresList" class="chores-list">
+            <div class="loading">Loading chores...</div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Chore</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editChoreForm">
+                <input type="hidden" id="editChoreId">
+                <div class="form-group">
+                    <label for="editTitle">Title *</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editPriority">Priority</label>
+                    <select id="editPriority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Chore</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/chores';
+        let chores = [];
+
+        // Load chores when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChores();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Add chore form
+            document.getElementById('addChoreForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addChore();
+            });
+
+            // Edit chore form
+            document.getElementById('editChoreForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await updateChore();
+            });
+
+            // Close modal
+            document.querySelector('.close').addEventListener('click', closeModal);
+            window.addEventListener('click', (e) => {
+                const modal = document.getElementById('editModal');
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+        }
+
+        async function loadChores() {
+            try {
+                const response = await fetch(API_URL);
+                chores = await response.json();
+                renderChores();
+            } catch (error) {
+                console.error('Error loading chores:', error);
+                document.getElementById('choresList').innerHTML = '<div class="empty-state"><h2>Error loading chores</h2></div>';
+            }
+        }
+
+        function renderChores() {
+            const choresList = document.getElementById('choresList');
+            
+            if (chores.length === 0) {
+                choresList.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No chores yet!</h2>
+                        <p>Add your first chore using the form above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            choresList.innerHTML = chores.map(chore => `
+                <div class="chore-card ${chore.completed ? 'completed' : ''}">
+                    <div class="chore-header">
+                        <div class="chore-title">${escapeHtml(chore.title)}</div>
+                        <span class="priority-badge priority-${chore.priority}">${chore.priority.toUpperCase()}</span>
+                    </div>
+                    ${chore.description ? `<div class="chore-description">${escapeHtml(chore.description)}</div>` : ''}
+                    <div class="chore-footer">
+                        <label class="checkbox-container">
+                            <input type="checkbox" ${chore.completed ? 'checked' : ''} 
+                                   onchange="toggleComplete(${chore.id}, this.checked)">
+                            <span>${chore.completed ? 'Completed' : 'Mark as complete'}</span>
+                        </label>
+                        <div class="chore-actions">
+                            <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
+                            <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addChore() {
+            const form = document.getElementById('addChoreForm');
+            const formData = new FormData(form);
+            
+            const chore = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                priority: formData.get('priority')
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(chore)
+                });
+
+                if (response.ok) {
+                    form.reset();
+                    await loadChores();
+                }
+            } catch (error) {
+                console.error('Error adding chore:', error);
+                alert('Error adding chore. Please try again.');
+            }
+        }
+
+        async function toggleComplete(choreId, completed) {
+            try {
+                const response = await fetch(`${API_URL}/${choreId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ completed: completed ? 1 : 0 })
+                });
+
+                if (response.ok) {
+                    await loadChores();
+                }
+            } catch (error) {
+                console.error('Error updating chore:', error);
+                alert('Error updating chore. Please try again.');
+            }
+        }
+
+        function openEditModal(choreId) {
+            const chore = chores.find(c => c.id === choreId);
+            if (!chore) return;
+
+            document.getElementById('editChoreId').value = chore.id;
+            document.getElementById('editTitle').value = chore.title;
+            document.getElementById('editDescription').value = chore.description || '';
+            document.getElementById('editPriority').value = chore.priority;
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function updateChore() {
+            const choreId = document.getElementById('editChoreId').value;
+            const form = document.getElementById('editChoreForm');
+            const formData = new FormData(form);
+
+            const chore = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                priority: formData.get('priority')
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/${choreId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(chore)
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    await loadChores();
+                }
+            } catch (error) {
+                console.error('Error updating chore:', error);
+                alert('Error updating chore. Please try again.');
+            }
+        }
+
+        async function deleteChore(choreId) {
+            if (!confirm('Are you sure you want to delete this chore?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${choreId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadChores();
+                }
+            } catch (error) {
+                console.error('Error deleting chore:', error);
+                alert('Error deleting chore. Please try again.');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+
