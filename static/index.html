@@ -47,10 +47,17 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1400px;
             margin: 0 auto;
             position: relative;
             z-index: 1;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 25px;
+            align-items: start;
         }
 
         /* ========= PLAYER SELECTION ========= */
@@ -660,6 +667,12 @@
         }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 600px) {
             .player-selection h1 {
                 font-size: 2.5em;
@@ -751,16 +764,19 @@
                 </div>
             </div>
 
-            <!-- Leaderboard -->
-            <div class="leaderboard">
-                <h2>🏆 Leaderboard</h2>
-                <div class="leaderboard-grid" id="leaderboardGrid"></div>
-            </div>
+            <!-- Main Grid Layout -->
+            <div class="main-grid">
+                <!-- Chores (Left Side) -->
+                <div class="chores-section">
+                    <h2>📝 Chores</h2>
+                    <div id="choresList"></div>
+                </div>
 
-            <!-- Chores -->
-            <div class="chores-section">
-                <h2>📝 Chores</h2>
-                <div id="choresList"></div>
+                <!-- Leaderboard (Right Side) -->
+                <div class="leaderboard" style="position: sticky; top: 20px;">
+                    <h2>🏆 Leaderboard</h2>
+                    <div class="leaderboard-grid" id="leaderboardGrid"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -981,12 +997,16 @@
                         if (canComplete || isAdmin) {
                             const checkboxId = `assignment-${assignment.id}`;
                             const checked = assignment.completed ? 'checked' : '';
-                            const disabled = (!canComplete || assignment.completed) ? 'disabled' : '';
+                            // Only disable if already completed and user is not admin
+                            const disabled = (assignment.completed && !isAdmin) ? 'disabled' : '';
+                            // Prevent unchecking unless admin
+                            const onclick = assignment.completed && !isAdmin ? 'return false;' : '';
                             
                             assignmentHtml += `
                                 <div class="checkbox-wrapper" style="margin-bottom: 10px;">
                                     <input type="checkbox" id="${checkboxId}" ${checked} ${disabled}
-                                        onchange="completeAssignment(${assignment.id}, this.checked)">
+                                        onclick="${onclick}"
+                                        onchange="completeAssignment(${assignment.id}, this.checked, '${checkboxId}')">
                                     <label for="${checkboxId}" style="cursor: pointer;">
                                         ${escapeHtml(assignment.user_name)}${assignment.completed ? ' ✅' : ''}
                                     </label>
@@ -1066,24 +1086,42 @@
         }
 
         // Complete assignment
-        async function completeAssignment(assignmentId, completed) {
+        async function completeAssignment(assignmentId, completed, checkboxId) {
+            // Keep the checkbox checked while processing
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox && completed) {
+                checkbox.disabled = true;
+            }
+            
             try {
-                await fetch(`/api/chores/assignment/${assignmentId}/complete`, {
+                const response = await fetch(`/api/chores/assignment/${assignmentId}/complete`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ completed: completed })
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to complete assignment');
+                }
                 
                 if (completed) {
                     showConfetti();
                     playSound();
                 }
                 
-                loadChores();
-                loadLeaderboard();
+                // Wait a moment before reloading to ensure the backend has processed
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                await loadChores();
+                await loadLeaderboard();
             } catch (error) {
                 console.error('Error completing assignment:', error);
-                alert('Failed to complete assignment.');
+                alert('Failed to complete assignment. Please try again.');
+                // Restore checkbox state on error
+                if (checkbox) {
+                    checkbox.checked = !completed;
+                    checkbox.disabled = false;
+                }
             }
         }
 
