@@ -47,7 +47,8 @@ def init_db():
             # Add standard users
             conn.execute("INSERT INTO users (name, role) VALUES ('Mason', 'standard')")
             conn.execute("INSERT INTO users (name, role) VALUES ('Liam', 'standard')")
-            print("Seeded default users: Jordan, Sarah (admins), Mason, Liam (standard)")
+            conn.execute("INSERT INTO users (name, role) VALUES ('Addison', 'standard')")
+            print("Seeded default users: Jordan, Sarah (admins), Mason, Liam, Addison (standard)")
         
         # Create chores table with completed_by field
         conn.execute('''
@@ -80,9 +81,22 @@ def index():
 
 @app.route('/api/chores', methods=['GET'])
 def get_chores():
-    """Get all chores."""
+    """Get chores filtered by user - completed chores only show to the person who completed them."""
+    user_id = request.args.get('user_id', type=int)
+    
     conn = get_db_connection()
-    chores = conn.execute('SELECT * FROM chores ORDER BY created_at DESC').fetchall()
+    
+    if user_id:
+        # Get incomplete chores (visible to all) + chores completed by this user
+        chores = conn.execute('''
+            SELECT * FROM chores 
+            WHERE completed = 0 OR completed_by = ?
+            ORDER BY created_at DESC
+        ''', (user_id,)).fetchall()
+    else:
+        # No user specified, return all chores
+        chores = conn.execute('SELECT * FROM chores ORDER BY created_at DESC').fetchall()
+    
     conn.close()
     
     return jsonify([dict(chore) for chore in chores])

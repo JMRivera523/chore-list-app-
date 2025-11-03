@@ -573,12 +573,14 @@
             
             playerGrid.innerHTML = users.map(user => `
                 <div class="player-card ${user.role}" onclick="selectPlayer(${user.id})">
-                    <div class="player-icon">${user.role === 'admin' ? '👑' : '👤'}</div>
+                    <div class="player-icon">👤</div>
                     <div class="player-name">${escapeHtml(user.name)}</div>
                     <div class="player-role">${user.role === 'admin' ? 'Admin' : 'Player'}</div>
                 </div>
             `).join('');
         }
+
+        let eventListenersSetup = false;
 
         function selectPlayer(userId) {
             currentUser = users.find(u => u.id === userId);
@@ -598,8 +600,11 @@
                 document.getElementById('addChoreSection').classList.add('hidden');
             }
 
-            // Setup event listeners
-            setupEventListeners();
+            // Setup event listeners only once
+            if (!eventListenersSetup) {
+                setupEventListeners();
+                eventListenersSetup = true;
+            }
 
             // Load data
             loadAll();
@@ -638,7 +643,8 @@
 
         async function loadChores() {
             try {
-                const response = await fetch(API_URL);
+                // Pass current user ID to filter chores
+                const response = await fetch(`${API_URL}?user_id=${currentUser.id}`);
                 chores = await response.json();
                 renderChores();
             } catch (error) {
