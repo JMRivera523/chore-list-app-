@@ -9,6 +9,14 @@ CORS(app)
 
 DATABASE = 'chores.db'
 
+# Initialize database on startup (important for gunicorn/production)
+def initialize_database():
+    """Initialize the database on app startup."""
+    if not os.path.exists(DATABASE):
+        print(f"Database {DATABASE} not found. Creating...")
+    init_db()
+    print(f"Database initialized: {DATABASE}")
+
 def get_db_connection():
     """Create a database connection."""
     conn = sqlite3.connect(DATABASE)
@@ -17,20 +25,27 @@ def get_db_connection():
 
 def init_db():
     """Initialize the database with the chores table."""
-    conn = get_db_connection()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS chores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            completed BOOLEAN NOT NULL DEFAULT 0,
-            priority TEXT DEFAULT 'medium',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS chores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                completed BOOLEAN NOT NULL DEFAULT 0,
+                priority TEXT DEFAULT 'medium',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        raise
+
+# Initialize database when the app starts (works with gunicorn)
+initialize_database()
 
 @app.route('/')
 def index():
