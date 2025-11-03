@@ -914,6 +914,7 @@
         let editingChoreId = null;
         let leaderboardMode = 'weekly'; // 'weekly' or 'alltime'
         let splitTaskAssignmentId = null;
+        let splitTaskChoreId = null;
 
         // Avatar and color options
         const avatars = ['😀', '😎', '🤩', '🥳', '🤖', '👾', '🦄', '🐶', '🐱', '🐼', '🦊', '🐸', '🦁', '🐯', '🐨', '🐵', '🦉', '🦋', '🌈', '⭐', '🎨', '🎮', '⚽', '🏀'];
@@ -1090,16 +1091,22 @@
 
                 let actions = '';
                 if (chore.assigned_to_all) {
-                    // General chore - show complete checkbox
+                    // General chore - show complete checkbox and split button
                     if (isAdmin || !isCompleted) {
                         const checkboxId = `chore-${chore.id}`;
                         const checked = isCompleted ? 'checked' : '';
+                        
+                        // Show split button for high priority tasks
+                        const splitBtn = (!isCompleted && chore.priority === 'high') ? 
+                            `<button class="btn btn-secondary" onclick="openGeneralSplitModal(${chore.id}, '${escapeHtml(chore.title).replace(/'/g, "\\'")}')" style="padding: 10px 20px;">🤝 Split Task</button>` : '';
+                        
                         actions = `
                             <div class="checkbox-wrapper">
                                 <input type="checkbox" id="${checkboxId}" ${checked}
                                     onchange="toggleComplete(${chore.id}, this.checked)">
                                 <label for="${checkboxId}" style="cursor: pointer;">Mark as Complete</label>
                             </div>
+                            ${splitBtn}
                         `;
                     }
                 }
@@ -1557,9 +1564,31 @@
             }
         }
 
-        // Open split task modal
+        // Open split task modal for general chores
+        function openGeneralSplitModal(choreId, choreTitle) {
+            splitTaskAssignmentId = null;
+            splitTaskChoreId = choreId;
+            
+            const modal = document.getElementById('splitModal');
+            const select = document.getElementById('splitWithUserId');
+            
+            document.getElementById('splitTaskInfo').innerHTML = `
+                <strong>Split "${choreTitle}" with another player!</strong><br>
+                This will convert it to assigned tasks - both of you will complete it individually for full points.
+            `;
+            
+            // Populate user dropdown (exclude current user)
+            select.innerHTML = users.filter(u => u.id !== currentUser.id)
+                .map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`)
+                .join('');
+            
+            modal.style.display = 'block';
+        }
+
+        // Open split task modal for assignments
         function openSplitModal(assignmentId, choreTitle) {
             splitTaskAssignmentId = assignmentId;
+            splitTaskChoreId = null;
             
             const modal = document.getElementById('splitModal');
             const select = document.getElementById('splitWithUserId');
@@ -1577,6 +1606,7 @@
         function closeSplitModal() {
             document.getElementById('splitModal').style.display = 'none';
             splitTaskAssignmentId = null;
+            splitTaskChoreId = null;
         }
 
         // Submit split task
@@ -1586,10 +1616,27 @@
             const splitWithUserId = parseInt(document.getElementById('splitWithUserId').value);
             
             try {
-                const response = await fetch(`/api/chores/assignment/${splitTaskAssignmentId}/split`, {
+                let endpoint, body;
+                
+                if (splitTaskChoreId) {
+                    // Splitting a general chore
+                    endpoint = `/api/chores/${splitTaskChoreId}/split`;
+                    body = { 
+                        user_id: currentUser.id, 
+                        split_with_user_id: splitWithUserId 
+                    };
+                } else if (splitTaskAssignmentId) {
+                    // Splitting an assignment
+                    endpoint = `/api/chores/assignment/${splitTaskAssignmentId}/split`;
+                    body = { split_with_user_id: splitWithUserId };
+                } else {
+                    throw new Error('No task selected to split');
+                }
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ split_with_user_id: splitWithUserId })
+                    body: JSON.stringify(body)
                 });
                 
                 const data = await response.json();

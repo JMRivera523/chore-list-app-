@@ -666,10 +666,70 @@ def adjust_user_points(user_id):
         VALUES (?, ?, ?)
     ''', (user_id, points, reason))
     
+    # Create a special "bonus/penalty" chore for weekly leaderboard
+    # This makes the adjustment appear in the current week's points
+    cursor = conn.execute('''
+        INSERT INTO chores (title, description, priority, points, recurrence_type, assigned_to_all, completed, completed_by)
+        VALUES (?, ?, 'medium', ?, 'one-time', 0, 1, ?)
+    ''', (reason, f"Admin adjustment: {'+' if points > 0 else ''}{points} points", abs(points) if points > 0 else 1, user_id if points > 0 else None))
+    
+    # For negative points, we can't easily remove from weekly, so just note it in all-time
+    # The all-time will show the negative adjustment
+    
     conn.commit()
     conn.close()
     
     return jsonify({'success': True, 'points': points})
+
+@app.route('/api/chores/<int:chore_id>/split', methods=['POST'])
+def split_general_chore(chore_id):
+    """Split a general chore with another user by converting it to assignments."""
+    data = request.get_json()
+    user_id = data.get('user_id')  # Current user
+    split_with_user_id = data.get('split_with_user_id')
+    
+    if not user_id or not split_with_user_id:
+        return jsonify({'error': 'user_id and split_with_user_id required'}), 400
+    
+    conn = get_db_connection()
+    
+    # Get the chore
+    chore = conn.execute('SELECT * FROM chores WHERE id = ?', (chore_id,)).fetchone()
+    if not chore:
+        conn.close()
+        return jsonify({'error': 'Chore not found'}), 404
+    
+    # Check if it's a general chore
+    if not chore['assigned_to_all']:
+        conn.close()
+        return jsonify({'error': 'This chore is already assigned'}), 400
+    
+    # Check if already completed
+    if chore['completed']:
+        conn.close()
+        return jsonify({'error': 'Cannot split completed chore'}), 400
+    
+    # Convert to assigned chore
+    conn.execute('UPDATE chores SET assigned_to_all = 0 WHERE id = ?', (chore_id,))
+    
+    # Create assignments for both users
+    conn.execute('''
+        INSERT INTO chore_assignments (chore_id, user_id, completed)
+        VALUES (?, ?, 0)
+    ''', (chore_id, user_id))
+    
+    conn.execute('''
+        INSERT INTO chore_assignments (chore_id, user_id, completed)
+        VALUES (?, ?, 0)
+    ''', (chore_id, split_with_user_id))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Task split! Both users will earn {chore["points"]} points when completed.'
+    })
 
 @app.route('/api/chores/assignment/<int:assignment_id>/split', methods=['POST'])
 def split_assignment(assignment_id):
