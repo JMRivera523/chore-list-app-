@@ -492,6 +492,12 @@
                         <option value="high">High</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="isRecurring" name="isRecurring" checked style="width: auto; margin-right: 10px;">
+                        <span>Daily recurring (resets at midnight)</span>
+                    </label>
+                </div>
                 <button type="submit" class="btn btn-primary">Add Chore</button>
             </form>
         </div>
@@ -537,6 +543,12 @@
                         <option value="medium">Medium</option>
                         <option value="high">High</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editIsRecurring" name="isRecurring" style="width: auto; margin-right: 10px;">
+                        <span>Daily recurring (resets at midnight)</span>
+                    </label>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Chore</button>
             </form>
@@ -667,10 +679,16 @@
                 const completedByUser = chore.completed_by ? users.find(u => u.id === chore.completed_by) : null;
                 const completedByName = completedByUser ? completedByUser.name : null;
 
+                const recurringBadge = chore.is_recurring ? '🔄' : '⭐';
+                const recurringTitle = chore.is_recurring ? 'Daily recurring' : 'One-time task';
+                
                 return `
                     <div class="chore-card ${chore.completed ? 'completed' : ''}">
                         <div class="chore-header">
-                            <div class="chore-title">${escapeHtml(chore.title)}</div>
+                            <div class="chore-title">
+                                <span title="${recurringTitle}" style="font-size: 0.8em; margin-right: 5px;">${recurringBadge}</span>
+                                ${escapeHtml(chore.title)}
+                            </div>
                             <span class="priority-badge priority-${chore.priority}">${chore.priority.toUpperCase()}</span>
                         </div>
                         ${chore.description ? `<div class="chore-description">${escapeHtml(chore.description)}</div>` : ''}
@@ -700,7 +718,8 @@
             const chore = {
                 title: formData.get('title'),
                 description: formData.get('description'),
-                priority: formData.get('priority')
+                priority: formData.get('priority'),
+                is_recurring: document.getElementById('isRecurring').checked
             };
 
             try {
@@ -712,6 +731,8 @@
 
                 if (response.ok) {
                     form.reset();
+                    // Reset checkbox to checked by default
+                    document.getElementById('isRecurring').checked = true;
                     await loadChores();
                 }
             } catch (error) {
@@ -748,6 +769,7 @@
             document.getElementById('editTitle').value = chore.title;
             document.getElementById('editDescription').value = chore.description || '';
             document.getElementById('editPriority').value = chore.priority;
+            document.getElementById('editIsRecurring').checked = chore.is_recurring;
 
             document.getElementById('editModal').style.display = 'block';
         }
@@ -764,7 +786,8 @@
             const chore = {
                 title: formData.get('title'),
                 description: formData.get('description'),
-                priority: formData.get('priority')
+                priority: formData.get('priority'),
+                is_recurring: document.getElementById('editIsRecurring').checked
             };
 
             try {

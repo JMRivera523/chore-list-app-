@@ -50,7 +50,7 @@ def init_db():
             conn.execute("INSERT INTO users (name, role) VALUES ('Addison', 'standard')")
             print("Seeded default users: Jordan, Sarah (admins), Mason, Liam, Addison (standard)")
         
-        # Create chores table with completed_by field
+        # Create chores table with completed_by and recurring fields
         conn.execute('''
             CREATE TABLE IF NOT EXISTS chores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,12 +58,39 @@ def init_db():
                 description TEXT,
                 completed BOOLEAN NOT NULL DEFAULT 0,
                 priority TEXT DEFAULT 'medium',
+                is_recurring BOOLEAN NOT NULL DEFAULT 1,
                 completed_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (completed_by) REFERENCES users (id)
             )
         ''')
+        
+        # Create completion history table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS completion_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chore_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (chore_id) REFERENCES chores (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        # Create settings table for tracking last reset
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        ''')
+        
+        # Initialize last reset date
+        today = datetime.now().date().isoformat()
+        conn.execute('''
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('last_reset_date', ?)
+        ''', (today,))
         
         conn.commit()
         conn.close()
@@ -74,6 +101,50 @@ def init_db():
 # Initialize database when the app starts (works with gunicorn)
 initialize_database()
 
+def check_and_reset_daily_chores():
+    """Check if it's a new day and reset recurring chores if needed."""
+    try:
+        conn = get_db_connection()
+        
+        # Get last reset date
+        result = conn.execute("SELECT value FROM settings WHERE key = 'last_reset_date'").fetchone()
+        last_reset_date = result['value'] if result else None
+        today = datetime.now().date().isoformat()
+        
+        # If it's a new day, reset recurring chores
+        if last_reset_date != today:
+            print(f"New day detected! Resetting recurring chores. Last reset: {last_reset_date}, Today: {today}")
+            
+            # Get all completed recurring chores
+            completed_recurring = conn.execute('''
+                SELECT id, completed_by FROM chores 
+                WHERE completed = 1 AND is_recurring = 1 AND completed_by IS NOT NULL
+            ''').fetchall()
+            
+            # Save completion history before resetting
+            for chore in completed_recurring:
+                conn.execute('''
+                    INSERT INTO completion_history (chore_id, user_id, completed_at)
+                    VALUES (?, ?, datetime('now', '-1 day'))
+                ''', (chore['id'], chore['completed_by']))
+            
+            # Reset recurring chores
+            conn.execute('''
+                UPDATE chores 
+                SET completed = 0, completed_by = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE is_recurring = 1
+            ''')
+            
+            # Update last reset date
+            conn.execute("UPDATE settings SET value = ? WHERE key = 'last_reset_date'", (today,))
+            
+            conn.commit()
+            print(f"Reset {len(completed_recurring)} recurring chores")
+        
+        conn.close()
+    except Exception as e:
+        print(f"Error in check_and_reset_daily_chores: {e}")
+
 @app.route('/')
 def index():
     """Serve the main page."""
@@ -82,6 +153,9 @@ def index():
 @app.route('/api/chores', methods=['GET'])
 def get_chores():
     """Get chores filtered by user - completed chores only show to the person who completed them."""
+    # Check and reset daily chores if it's a new day
+    check_and_reset_daily_chores()
+    
     user_id = request.args.get('user_id', type=int)
     
     conn = get_db_connection()
@@ -124,11 +198,12 @@ def create_chore():
     title = data['title']
     description = data.get('description', '')
     priority = data.get('priority', 'medium')
+    is_recurring = data.get('is_recurring', True)  # Default to recurring
     
     conn = get_db_connection()
     cursor = conn.execute(
-        'INSERT INTO chores (title, description, priority) VALUES (?, ?, ?)',
-        (title, description, priority)
+        'INSERT INTO chores (title, description, priority, is_recurring) VALUES (?, ?, ?, ?)',
+        (title, description, priority, 1 if is_recurring else 0)
     )
     conn.commit()
     chore_id = cursor.lastrowid
@@ -159,6 +234,7 @@ def update_chore(chore_id):
     completed = data.get('completed', chore['completed'])
     priority = data.get('priority', chore['priority'])
     completed_by = data.get('completed_by', chore['completed_by'])
+    is_recurring = data.get('is_recurring', chore['is_recurring'])
     
     # If marking as incomplete, clear the completed_by field
     if not completed:
@@ -166,9 +242,9 @@ def update_chore(chore_id):
     
     conn.execute(
         '''UPDATE chores 
-           SET title = ?, description = ?, completed = ?, priority = ?, completed_by = ?, updated_at = CURRENT_TIMESTAMP
+           SET title = ?, description = ?, completed = ?, priority = ?, completed_by = ?, is_recurring = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ?''',
-        (title, description, completed, priority, completed_by, chore_id)
+        (title, description, completed, priority, completed_by, 1 if is_recurring else 0, chore_id)
     )
     conn.commit()
     
