@@ -119,6 +119,39 @@ The app is fully responsive and works great on:
 - Automatically creates the database on first run
 - Stores: title, description, completion status, priority, and timestamps
 
+## 🚀 Deploy to Cloud (FREE)
+
+This app is ready to deploy to **Render** for free! No credit card required.
+
+### Steps to Deploy:
+
+1. **Push your code to GitHub:**
+   - Create a new repository on [GitHub](https://github.com)
+   - Run these commands:
+   ```bash
+   git remote add origin https://github.com/YOUR-USERNAME/chore-list-app.git
+   git branch -M main
+   git push -u origin main
+   ```
+
+2. **Deploy on Render:**
+   - Go to [render.com](https://render.com) and sign up (free)
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Render will auto-detect the `render.yaml` configuration
+   - Click "Create Web Service"
+   - Wait 2-3 minutes for deployment
+
+3. **Access your app:**
+   - Render will give you a public URL like: `https://chore-list-app-xyz.onrender.com`
+   - Share this URL with anyone!
+
+### Important Notes:
+- Free tier apps sleep after 15 minutes of inactivity
+- First request after sleeping takes ~30 seconds to wake up
+- Database is file-based (SQLite), so data persists on Render's disk
+- For production use, consider upgrading to Render's paid tier or using PostgreSQL
+
 ## Troubleshooting
 
 **Port already in use:**
