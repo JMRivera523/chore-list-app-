@@ -602,10 +602,10 @@ def get_leaderboard():
 
 @app.route('/api/leaderboard/all-time', methods=['GET'])
 def get_all_time_leaderboard():
-    """Get all-time leaderboard with cumulative points."""
+    """Get all-time leaderboard with cumulative points (historical + current week)."""
     conn = get_db_connection()
     
-    # Sum all-time points for each user
+    # Sum all-time points PLUS current week's points
     leaderboard = conn.execute('''
         SELECT 
             u.id,
@@ -613,7 +613,16 @@ def get_all_time_leaderboard():
             u.role,
             u.avatar,
             u.color,
-            COALESCE((SELECT SUM(points) FROM all_time_points WHERE user_id = u.id), 0) as points
+            COALESCE((SELECT SUM(points) FROM all_time_points WHERE user_id = u.id), 0) + 
+            COALESCE((
+                SELECT SUM(c.points) FROM chores c 
+                WHERE c.completed_by = u.id AND c.completed = 1
+            ), 0) + 
+            COALESCE((
+                SELECT SUM(c.points) FROM chore_assignments ca
+                JOIN chores c ON ca.chore_id = c.id
+                WHERE ca.user_id = u.id AND ca.completed = 1
+            ), 0) as points
         FROM users u
         ORDER BY points DESC, u.name ASC
     ''').fetchall()
