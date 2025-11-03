@@ -13,6 +13,63 @@ A beautiful and functional CRUD (Create, Read, Update, Delete) application for m
 - 📱 Responsive design that works on all devices
 - 💾 SQLite database for persistent storage
 
+## 🖥️ Run as Desktop App (Electron) ⭐ RECOMMENDED
+
+The easiest way to use this app is as a desktop application!
+
+### Prerequisites for Desktop App:
+
+- **Node.js** (includes npm) - [Download here](https://nodejs.org/)
+  - On Mac, you can also install with: `brew install node`
+- **Python 3** (already required)
+
+### Quick Start:
+
+1. **Install Node.js if you haven't already:**
+   - Download from: https://nodejs.org/ (LTS version recommended)
+   - Or on Mac: `brew install node`
+
+2. **Install dependencies:**
+   ```bash
+   cd chore-list-app
+   
+   # Install Python dependencies
+   pip3 install -r requirements.txt
+   
+   # Install Node.js dependencies
+   npm install
+   ```
+
+3. **Run the desktop app:**
+   ```bash
+   npm start
+   ```
+
+That's it! The app will open in its own window and your chores are saved locally.
+
+### Build Standalone App:
+
+Create a distributable app that doesn't require Python/Node.js installed:
+
+```bash
+# For Mac:
+npm run package-mac
+
+# For Windows:
+npm run package-win
+
+# For Linux:
+npm run package-linux
+```
+
+The standalone app will be in the `dist/` folder. You can move it anywhere or share it with others!
+
+---
+
+## 🌐 Run in Browser (Web Version)
+
+You can also run it as a traditional web app.
+
 ## Prerequisites
 
 - Python 3.7 or higher

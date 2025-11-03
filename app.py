@@ -136,7 +136,15 @@ def delete_chore(chore_id):
 
 if __name__ == '__main__':
     init_db()
-    print("Starting Chore List App...")
-    print("Visit http://localhost:5000 in your browser")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Check if running in Electron or standalone
+    is_electron = os.environ.get('FLASK_ENV') == 'production'
+    debug_mode = not is_electron
+    
+    if not is_electron:
+        print("Starting Chore List App...")
+        print("Visit http://localhost:5000 in your browser")
+    else:
+        print("Running on http://localhost:5000")
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
 

@@ -1,0 +1,27 @@
+{
+  "name": "chore-list-app",
+  "version": "1.0.0",
+  "description": "A beautiful CRUD app for managing your chore list",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "package-mac": "electron-packager . ChoreList --platform=darwin --arch=arm64,x64 --icon=assets/icon.icns --out=dist --overwrite",
+    "package-win": "electron-packager . ChoreList --platform=win32 --arch=x64 --icon=assets/icon.ico --out=dist --overwrite",
+    "package-linux": "electron-packager . ChoreList --platform=linux --arch=x64 --out=dist --overwrite"
+  },
+  "keywords": [
+    "chore",
+    "todo",
+    "task",
+    "electron",
+    "flask"
+  ],
+  "author": "Jordan Rivera",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-packager": "^17.1.2"
+  }
+}
+
