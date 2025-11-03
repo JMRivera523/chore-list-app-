@@ -140,11 +140,14 @@ if __name__ == '__main__':
     is_electron = os.environ.get('FLASK_ENV') == 'production'
     debug_mode = not is_electron
     
+    # Use PORT environment variable for cloud deployment (Render, Heroku, etc.)
+    port = int(os.environ.get('PORT', 5000))
+    
     if not is_electron:
         print("Starting Chore List App...")
-        print("Visit http://localhost:5000 in your browser")
+        print(f"Visit http://localhost:{port} in your browser")
     else:
-        print("Running on http://localhost:5000")
+        print(f"Running on http://localhost:{port}")
     
-    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
 
