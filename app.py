@@ -24,18 +24,30 @@ def get_db_connection():
     return conn
 
 def init_db():
-    """Initialize the database with the chores and people tables."""
+    """Initialize the database with users and chores tables."""
     try:
         conn = get_db_connection()
         
-        # Create people table
+        # Create users table with roles
         conn.execute('''
-            CREATE TABLE IF NOT EXISTS people (
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
+                role TEXT NOT NULL CHECK(role IN ('admin', 'standard')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Seed default users if table is empty
+        count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        if count == 0:
+            # Add admins
+            conn.execute("INSERT INTO users (name, role) VALUES ('Jordan', 'admin')")
+            conn.execute("INSERT INTO users (name, role) VALUES ('Sarah', 'admin')")
+            # Add standard users
+            conn.execute("INSERT INTO users (name, role) VALUES ('Mason', 'standard')")
+            conn.execute("INSERT INTO users (name, role) VALUES ('Liam', 'standard')")
+            print("Seeded default users: Jordan, Sarah (admins), Mason, Liam (standard)")
         
         # Create chores table with completed_by field
         conn.execute('''
@@ -48,7 +60,7 @@ def init_db():
                 completed_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (completed_by) REFERENCES people (id)
+                FOREIGN KEY (completed_by) REFERENCES users (id)
             )
         ''')
         
@@ -168,78 +180,32 @@ def delete_chore(chore_id):
     
     return jsonify({'message': 'Chore deleted successfully'}), 200
 
-# ============ PEOPLE ENDPOINTS ============
+# ============ USER ENDPOINTS ============
 
-@app.route('/api/people', methods=['GET'])
-def get_people():
-    """Get all people."""
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    """Get all users."""
     conn = get_db_connection()
-    people = conn.execute('SELECT * FROM people ORDER BY name ASC').fetchall()
+    users = conn.execute('SELECT * FROM users ORDER BY name ASC').fetchall()
     conn.close()
     
-    return jsonify([dict(person) for person in people])
-
-@app.route('/api/people', methods=['POST'])
-def create_person():
-    """Add a new person."""
-    data = request.get_json()
-    
-    if not data or 'name' not in data:
-        return jsonify({'error': 'Name is required'}), 400
-    
-    name = data['name'].strip()
-    
-    if not name:
-        return jsonify({'error': 'Name cannot be empty'}), 400
-    
-    conn = get_db_connection()
-    try:
-        cursor = conn.execute('INSERT INTO people (name) VALUES (?)', (name,))
-        conn.commit()
-        person_id = cursor.lastrowid
-        
-        person = conn.execute('SELECT * FROM people WHERE id = ?', (person_id,)).fetchone()
-        conn.close()
-        
-        return jsonify(dict(person)), 201
-    except sqlite3.IntegrityError:
-        conn.close()
-        return jsonify({'error': 'Person with this name already exists'}), 400
-
-@app.route('/api/people/<int:person_id>', methods=['DELETE'])
-def delete_person(person_id):
-    """Delete a person."""
-    conn = get_db_connection()
-    person = conn.execute('SELECT * FROM people WHERE id = ?', (person_id,)).fetchone()
-    
-    if person is None:
-        conn.close()
-        return jsonify({'error': 'Person not found'}), 404
-    
-    # Remove person from completed chores (set to NULL)
-    conn.execute('UPDATE chores SET completed_by = NULL WHERE completed_by = ?', (person_id,))
-    
-    # Delete the person
-    conn.execute('DELETE FROM people WHERE id = ?', (person_id,))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'message': 'Person deleted successfully'}), 200
+    return jsonify([dict(user) for user in users])
 
 @app.route('/api/leaderboard', methods=['GET'])
 def get_leaderboard():
-    """Get leaderboard with points (completed chores count) for each person."""
+    """Get leaderboard with points (completed chores count) for each user."""
     conn = get_db_connection()
     
     leaderboard = conn.execute('''
         SELECT 
-            p.id,
-            p.name,
+            u.id,
+            u.name,
+            u.role,
             COUNT(c.id) as points
-        FROM people p
-        LEFT JOIN chores c ON p.id = c.completed_by AND c.completed = 1
-        GROUP BY p.id, p.name
-        ORDER BY points DESC, p.name ASC
+        FROM users u
+        LEFT JOIN chores c ON u.id = c.completed_by AND c.completed = 1
+        GROUP BY u.id, u.name, u.role
+        ORDER BY points DESC, u.name ASC
     ''').fetchall()
     
     conn.close()

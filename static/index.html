@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chore List App - Points Tracker</title>
+    <title>Chore List - Points Tracker</title>
     <style>
         * {
             margin: 0;
@@ -23,15 +23,128 @@
             margin: 0 auto;
         }
 
-        h1 {
-            text-align: center;
+        /* Player Selection Screen */
+        .player-selection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+
+        .player-selection h1 {
             color: white;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-selection p {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .player-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .player-card.admin {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #333;
+        }
+
+        .player-card.standard {
+            background: white;
+            color: #333;
+        }
+
+        .player-card .player-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .player-card .player-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .player-card .player-role {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Main App */
+        .main-app {
+            display: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
+        }
+
+        h1 {
+            color: white;
             font-size: 2.5em;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .add-chore-form, .people-section, .leaderboard {
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .btn-refresh {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-refresh:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .section {
             background: white;
             padding: 25px;
             border-radius: 15px;
@@ -115,11 +228,6 @@
             background: #da190b;
         }
 
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
         .chores-list {
             display: grid;
             gap: 15px;
@@ -132,7 +240,6 @@
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
         }
 
         .chore-card:hover {
@@ -192,19 +299,19 @@
             line-height: 1.5;
         }
 
+        .chore-completed-by {
+            font-size: 0.9em;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
         .chore-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-        }
-
-        .chore-completed-by {
-            font-size: 0.9em;
-            color: #667eea;
-            font-weight: 600;
-            margin-top: 10px;
         }
 
         .checkbox-container {
@@ -223,75 +330,6 @@
         .chore-actions {
             display: flex;
             gap: 8px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .empty-state h2 {
-            color: #999;
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-
-        .empty-state p {
-            color: #bbb;
-        }
-
-        .loading {
-            text-align: center;
-            color: white;
-            font-size: 1.2em;
-            padding: 20px;
-        }
-
-        /* People Management */
-        .people-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .person-tag {
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-        }
-
-        .person-tag button {
-            background: none;
-            border: none;
-            color: #c62828;
-            cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
-            padding: 0;
-            font-weight: bold;
-        }
-
-        .add-person-form {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .add-person-form input {
-            flex: 1;
-        }
-
-        .add-person-form button {
-            width: auto;
         }
 
         /* Leaderboard */
@@ -349,7 +387,20 @@
             color: #667eea;
         }
 
-        /* Modal styles */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -394,48 +445,35 @@
             color: #333;
         }
 
-        .person-select-list {
-            display: grid;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .person-select-item {
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 10px;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .person-select-item:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.05);
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏠 Chore List - Points Tracker</h1>
+    <!-- Player Selection Screen -->
+    <div id="playerSelection" class="player-selection">
+        <h1>🏠 Chore List</h1>
+        <p>Select your player to continue</p>
+        <div class="player-grid" id="playerGrid">
+            <div class="loading">Loading players...</div>
+        </div>
+    </div>
 
-        <!-- People Management -->
-        <div class="people-section">
-            <h2 style="margin-bottom: 15px; color: #333;">👥 Manage People</h2>
-            <div id="peopleList" class="people-list">
-                <div class="loading">Loading people...</div>
-            </div>
-            <div class="add-person-form">
-                <input type="text" id="newPersonName" placeholder="Enter name" required>
-                <button class="btn btn-primary" onclick="addPerson()">Add Person</button>
+    <!-- Main App -->
+    <div id="mainApp" class="main-app container">
+        <div class="header">
+            <h1>🏠 Chore List</h1>
+            <div class="user-info">
+                <div>
+                    <div class="user-name" id="currentUserName"></div>
+                </div>
+                <button class="btn-refresh" onclick="logout()">🔄 Switch Player</button>
             </div>
         </div>
 
-        <!-- Add Chore Form -->
-        <div class="add-chore-form">
+        <!-- Add Chore Form (Admins Only) -->
+        <div id="addChoreSection" class="section hidden">
             <h2 style="margin-bottom: 20px; color: #333;">Add New Chore</h2>
             <form id="addChoreForm">
                 <div class="form-group">
@@ -444,7 +482,7 @@
                 </div>
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea id="description" name="description" placeholder="Additional details about the chore..."></textarea>
+                    <textarea id="description" name="description" placeholder="Additional details..."></textarea>
                 </div>
                 <div class="form-group">
                     <label for="priority">Priority</label>
@@ -459,12 +497,15 @@
         </div>
 
         <!-- Chores List -->
-        <div id="choresList" class="chores-list">
-            <div class="loading">Loading chores...</div>
+        <div class="section">
+            <h2 style="margin-bottom: 20px; color: #333;">📋 Chores</h2>
+            <div id="choresList" class="chores-list">
+                <div class="loading">Loading chores...</div>
+            </div>
         </div>
 
         <!-- Leaderboard -->
-        <div class="leaderboard">
+        <div class="section">
             <h2 style="margin-bottom: 15px; color: #333;">🏆 Leaderboard</h2>
             <div id="leaderboardList" class="leaderboard-list">
                 <div class="loading">Loading leaderboard...</div>
@@ -472,12 +513,12 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal (Admins Only) -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Edit Chore</h2>
-                <span class="close" onclick="closeModal('editModal')">&times;</span>
+                <span class="close" onclick="closeModal()">&times;</span>
             </div>
             <form id="editChoreForm">
                 <input type="hidden" id="editChoreId">
@@ -502,40 +543,72 @@
         </div>
     </div>
 
-    <!-- Select Person Modal -->
-    <div id="selectPersonModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Who completed this chore?</h2>
-                <span class="close" onclick="closeSelectPersonModal()">&times;</span>
-            </div>
-            <div id="personSelectList" class="person-select-list">
-                <!-- Populated dynamically -->
-            </div>
-        </div>
-    </div>
-
     <script>
         const API_URL = '/api/chores';
-        const PEOPLE_URL = '/api/people';
+        const USERS_URL = '/api/users';
         const LEADERBOARD_URL = '/api/leaderboard';
         
+        let currentUser = null;
+        let users = [];
         let chores = [];
-        let people = [];
-        let currentChoreId = null;
 
-        // Load everything when page loads
+        // Load users on page load
         document.addEventListener('DOMContentLoaded', () => {
-            loadAll();
-            setupEventListeners();
+            loadUsers();
         });
 
-        async function loadAll() {
-            await Promise.all([
-                loadPeople(),
-                loadChores(),
-                loadLeaderboard()
-            ]);
+        async function loadUsers() {
+            try {
+                const response = await fetch(USERS_URL);
+                users = await response.json();
+                renderPlayerSelection();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('playerGrid').innerHTML = '<div style="color: white;">Error loading users</div>';
+            }
+        }
+
+        function renderPlayerSelection() {
+            const playerGrid = document.getElementById('playerGrid');
+            
+            playerGrid.innerHTML = users.map(user => `
+                <div class="player-card ${user.role}" onclick="selectPlayer(${user.id})">
+                    <div class="player-icon">${user.role === 'admin' ? '👑' : '👤'}</div>
+                    <div class="player-name">${escapeHtml(user.name)}</div>
+                    <div class="player-role">${user.role === 'admin' ? 'Admin' : 'Player'}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectPlayer(userId) {
+            currentUser = users.find(u => u.id === userId);
+            if (!currentUser) return;
+
+            // Hide player selection, show main app
+            document.getElementById('playerSelection').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+
+            // Update user info
+            document.getElementById('currentUserName').textContent = currentUser.name;
+
+            // Show/hide admin features
+            if (currentUser.role === 'admin') {
+                document.getElementById('addChoreSection').classList.remove('hidden');
+            } else {
+                document.getElementById('addChoreSection').classList.add('hidden');
+            }
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Load data
+            loadAll();
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('playerSelection').style.display = 'flex';
         }
 
         function setupEventListeners() {
@@ -551,97 +624,16 @@
                 await updateChore();
             });
 
-            // Add person - Enter key
-            document.getElementById('newPersonName').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addPerson();
-                }
-            });
-
-            // Close modals on background click
+            // Close modal on background click
             window.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    e.target.style.display = 'none';
+                if (e.target.id === 'editModal') {
+                    closeModal();
                 }
             });
         }
 
-        async function loadPeople() {
-            try {
-                const response = await fetch(PEOPLE_URL);
-                people = await response.json();
-                renderPeople();
-            } catch (error) {
-                console.error('Error loading people:', error);
-                document.getElementById('peopleList').innerHTML = '<div style="color: #f44336;">Error loading people</div>';
-            }
-        }
-
-        function renderPeople() {
-            const peopleList = document.getElementById('peopleList');
-            
-            if (people.length === 0) {
-                peopleList.innerHTML = '<div style="color: #999;">No people added yet. Add someone to start tracking!</div>';
-                return;
-            }
-
-            peopleList.innerHTML = people.map(person => `
-                <div class="person-tag">
-                    ${escapeHtml(person.name)}
-                    <button onclick="deletePerson(${person.id})" title="Remove">×</button>
-                </div>
-            `).join('');
-        }
-
-        async function addPerson() {
-            const nameInput = document.getElementById('newPersonName');
-            const name = nameInput.value.trim();
-            
-            if (!name) {
-                alert('Please enter a name');
-                return;
-            }
-
-            try {
-                const response = await fetch(PEOPLE_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ name })
-                });
-
-                if (response.ok) {
-                    nameInput.value = '';
-                    await loadAll();
-                } else {
-                    const error = await response.json();
-                    alert(error.error || 'Error adding person');
-                }
-            } catch (error) {
-                console.error('Error adding person:', error);
-                alert('Error adding person. Please try again.');
-            }
-        }
-
-        async function deletePerson(personId) {
-            if (!confirm('Are you sure you want to remove this person? Their completed chores will remain but without attribution.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`${PEOPLE_URL}/${personId}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    await loadAll();
-                }
-            } catch (error) {
-                console.error('Error deleting person:', error);
-                alert('Error removing person. Please try again.');
-            }
+        async function loadAll() {
+            await Promise.all([loadChores(), loadLeaderboard()]);
         }
 
         async function loadChores() {
@@ -651,7 +643,7 @@
                 renderChores();
             } catch (error) {
                 console.error('Error loading chores:', error);
-                document.getElementById('choresList').innerHTML = '<div class="empty-state"><h2>Error loading chores</h2></div>';
+                document.getElementById('choresList').innerHTML = '<div class="empty-state">Error loading chores</div>';
             }
         }
 
@@ -659,18 +651,15 @@
             const choresList = document.getElementById('choresList');
             
             if (chores.length === 0) {
-                choresList.innerHTML = `
-                    <div class="empty-state">
-                        <h2>No chores yet!</h2>
-                        <p>Add your first chore using the form above.</p>
-                    </div>
-                `;
+                choresList.innerHTML = '<div class="empty-state"><h2>No chores yet!</h2></div>';
                 return;
             }
 
+            const isAdmin = currentUser.role === 'admin';
+
             choresList.innerHTML = chores.map(chore => {
-                const completedByPerson = chore.completed_by ? people.find(p => p.id === chore.completed_by) : null;
-                const completedByName = completedByPerson ? completedByPerson.name : null;
+                const completedByUser = chore.completed_by ? users.find(u => u.id === chore.completed_by) : null;
+                const completedByName = completedByUser ? completedByUser.name : null;
 
                 return `
                     <div class="chore-card ${chore.completed ? 'completed' : ''}">
@@ -686,10 +675,12 @@
                                        onchange="toggleComplete(${chore.id}, this.checked)">
                                 <span>${chore.completed ? 'Completed' : 'Mark as complete'}</span>
                             </label>
-                            <div class="chore-actions">
-                                <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
-                                <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
-                            </div>
+                            ${isAdmin ? `
+                                <div class="chore-actions">
+                                    <button class="btn btn-edit" onclick="openEditModal(${chore.id})">Edit</button>
+                                    <button class="btn btn-delete" onclick="deleteChore(${chore.id})">Delete</button>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -709,9 +700,7 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(chore)
                 });
 
@@ -726,55 +715,13 @@
         }
 
         async function toggleComplete(choreId, completed) {
-            if (completed) {
-                // Show person selection modal
-                if (people.length === 0) {
-                    alert('Please add people first to track who completed this chore!');
-                    await loadChores(); // Reload to uncheck the box
-                    return;
-                }
-                currentChoreId = choreId;
-                showSelectPersonModal();
-            } else {
-                // Unmark as complete
-                await updateChoreCompletion(choreId, false, null);
-            }
-        }
-
-        function showSelectPersonModal() {
-            const personSelectList = document.getElementById('personSelectList');
-            personSelectList.innerHTML = people.map(person => `
-                <div class="person-select-item" onclick="selectPerson(${person.id})">
-                    ${escapeHtml(person.name)}
-                </div>
-            `).join('');
-            
-            document.getElementById('selectPersonModal').style.display = 'block';
-        }
-
-        function closeSelectPersonModal() {
-            document.getElementById('selectPersonModal').style.display = 'none';
-            currentChoreId = null;
-            loadChores(); // Reload to ensure checkbox state is correct
-        }
-
-        async function selectPerson(personId) {
-            if (currentChoreId === null) return;
-            
-            await updateChoreCompletion(currentChoreId, true, personId);
-            closeSelectPersonModal();
-        }
-
-        async function updateChoreCompletion(choreId, completed, completedBy) {
             try {
                 const response = await fetch(`${API_URL}/${choreId}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         completed: completed ? 1 : 0,
-                        completed_by: completedBy
+                        completed_by: completed ? currentUser.id : null
                     })
                 });
 
@@ -799,8 +746,8 @@
             document.getElementById('editModal').style.display = 'block';
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
         }
 
         async function updateChore() {
@@ -817,14 +764,12 @@
             try {
                 const response = await fetch(`${API_URL}/${choreId}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(chore)
                 });
 
                 if (response.ok) {
-                    closeModal('editModal');
+                    closeModal();
                     await loadChores();
                 }
             } catch (error) {
@@ -867,7 +812,7 @@
             const leaderboardList = document.getElementById('leaderboardList');
             
             if (leaderboard.length === 0) {
-                leaderboardList.innerHTML = '<div style="color: #999; text-align: center;">No data yet. Complete some chores to see the leaderboard!</div>';
+                leaderboardList.innerHTML = '<div style="color: #999; text-align: center;">No data yet!</div>';
                 return;
             }
 
