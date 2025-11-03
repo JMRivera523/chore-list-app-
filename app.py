@@ -63,14 +63,18 @@ def init_db():
         # Seed default users if table is empty
         count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
         if count == 0:
-            # Add admins
-            conn.execute("INSERT INTO users (name, role) VALUES ('Jordan', 'admin')")
-            conn.execute("INSERT INTO users (name, role) VALUES ('Sarah', 'admin')")
+            # Add admins with PIN
+            conn.execute("INSERT INTO users (name, role, pin) VALUES ('Jordan', 'admin', '1234')")
+            conn.execute("INSERT INTO users (name, role, pin) VALUES ('Sarah', 'admin', '1234')")
             # Add standard users
             conn.execute("INSERT INTO users (name, role) VALUES ('Mason', 'standard')")
             conn.execute("INSERT INTO users (name, role) VALUES ('Liam', 'standard')")
             conn.execute("INSERT INTO users (name, role) VALUES ('Addison', 'standard')")
             print("Seeded default users: Jordan, Sarah (admins), Mason, Liam, Addison (standard)")
+        
+        # Ensure all admin accounts have PIN set (for existing databases)
+        conn.execute("UPDATE users SET pin = '1234' WHERE role = 'admin' AND (pin IS NULL OR pin = '')")
+        conn.commit()
         
         # Create chores table with completed_by and recurring fields
         conn.execute('''
@@ -122,6 +126,18 @@ def init_db():
                 completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 week_start_date TEXT NOT NULL,
                 FOREIGN KEY (chore_id) REFERENCES chores (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        # Create all-time points table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS all_time_points (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                points INTEGER NOT NULL DEFAULT 0,
+                reason TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -226,7 +242,30 @@ def check_and_reset_chores():
         if last_reset_week_str != this_monday_str:
             print(f"New week detected! Resetting weekly chores for week starting: {this_monday_str}")
             
-            # Save weekly chore completions
+            # Calculate and save current week's points to all-time before reset
+            current_points = conn.execute('''
+                SELECT 
+                    u.id as user_id,
+                    u.name,
+                    COALESCE((
+                        SELECT SUM(c.points) FROM chores c 
+                        WHERE c.completed_by = u.id AND c.completed = 1
+                    ), 0) + COALESCE((
+                        SELECT SUM(c.points) FROM chore_assignments ca
+                        JOIN chores c ON ca.chore_id = c.id
+                        WHERE ca.user_id = u.id AND ca.completed = 1
+                    ), 0) as weekly_points
+                FROM users u
+            ''').fetchall()
+            
+            for user in current_points:
+                if user['weekly_points'] > 0:
+                    conn.execute('''
+                        INSERT INTO all_time_points (user_id, points, reason)
+                        VALUES (?, ?, ?)
+                    ''', (user['user_id'], user['weekly_points'], f"Weekly total for week ending {this_monday_str}"))
+            
+            # Save weekly chore completions to history
             weekly_completed = conn.execute('''
                 SELECT id, completed_by FROM chores 
                 WHERE completed = 1 AND completed_by IS NOT NULL AND recurrence_type = 'weekly'
@@ -561,6 +600,28 @@ def get_leaderboard():
     
     return jsonify([dict(entry) for entry in leaderboard])
 
+@app.route('/api/leaderboard/all-time', methods=['GET'])
+def get_all_time_leaderboard():
+    """Get all-time leaderboard with cumulative points."""
+    conn = get_db_connection()
+    
+    # Sum all-time points for each user
+    leaderboard = conn.execute('''
+        SELECT 
+            u.id,
+            u.name,
+            u.role,
+            u.avatar,
+            u.color,
+            COALESCE((SELECT SUM(points) FROM all_time_points WHERE user_id = u.id), 0) as points
+        FROM users u
+        ORDER BY points DESC, u.name ASC
+    ''').fetchall()
+    
+    conn.close()
+    
+    return jsonify([dict(entry) for entry in leaderboard])
+
 @app.route('/api/users/<int:user_id>/history', methods=['GET'])
 def get_user_history(user_id):
     """Get completion history for a user (for leaderboard details)."""
@@ -586,6 +647,81 @@ def get_user_history(user_id):
     all_completions = [dict(row) for row in completed_chores] + [dict(row) for row in completed_assignments]
     
     return jsonify(all_completions)
+
+@app.route('/api/users/<int:user_id>/points/adjust', methods=['POST'])
+def adjust_user_points(user_id):
+    """Admin endpoint to manually adjust user's points."""
+    data = request.get_json()
+    points = data.get('points', 0)  # Can be negative
+    reason = data.get('reason', 'Manual adjustment')
+    
+    if points == 0:
+        return jsonify({'error': 'Points must be non-zero'}), 400
+    
+    conn = get_db_connection()
+    
+    # Add to all-time points
+    conn.execute('''
+        INSERT INTO all_time_points (user_id, points, reason)
+        VALUES (?, ?, ?)
+    ''', (user_id, points, reason))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'points': points})
+
+@app.route('/api/chores/assignment/<int:assignment_id>/split', methods=['POST'])
+def split_assignment(assignment_id):
+    """Split an assignment with another user."""
+    data = request.get_json()
+    split_with_user_id = data.get('split_with_user_id')
+    
+    if not split_with_user_id:
+        return jsonify({'error': 'split_with_user_id required'}), 400
+    
+    conn = get_db_connection()
+    
+    # Get the original assignment
+    assignment = conn.execute('SELECT * FROM chore_assignments WHERE id = ?', (assignment_id,)).fetchone()
+    if not assignment:
+        conn.close()
+        return jsonify({'error': 'Assignment not found'}), 404
+    
+    # Get the chore
+    chore = conn.execute('SELECT * FROM chores WHERE id = ?', (assignment['chore_id'],)).fetchone()
+    if not chore:
+        conn.close()
+        return jsonify({'error': 'Chore not found'}), 404
+    
+    # Check if already completed
+    if assignment['completed']:
+        conn.close()
+        return jsonify({'error': 'Cannot split completed assignment'}), 400
+    
+    # Check if the other user already has an assignment
+    existing = conn.execute('''
+        SELECT id FROM chore_assignments 
+        WHERE chore_id = ? AND user_id = ?
+    ''', (assignment['chore_id'], split_with_user_id)).fetchone()
+    
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Other user already has this assignment'}), 400
+    
+    # Create new assignment for the split user
+    conn.execute('''
+        INSERT INTO chore_assignments (chore_id, user_id, completed)
+        VALUES (?, ?, 0)
+    ''', (assignment['chore_id'], split_with_user_id))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Task split! Both users will earn {chore["points"]} points when completed.'
+    })
 
 if __name__ == '__main__':
     init_db()

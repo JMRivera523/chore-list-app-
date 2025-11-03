@@ -761,6 +761,7 @@
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn btn-secondary" onclick="switchPlayer()">🔄 Switch Player</button>
                     <button class="btn btn-primary hidden" id="addChoreBtn" onclick="openAddChoreModal()">➕ Add Chore</button>
+                    <button class="btn btn-success hidden" id="pointsBtn" onclick="openPointsModal()">⚙️ Points</button>
                 </div>
             </div>
 
@@ -774,7 +775,13 @@
 
                 <!-- Leaderboard (Right Side) -->
                 <div class="leaderboard" style="position: sticky; top: 20px;">
-                    <h2>🏆 Leaderboard</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">🏆 Leaderboard</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="toggleLeaderboard('weekly')" id="weeklyBtn" style="padding: 8px 15px; font-size: 0.9em;">📅 Week</button>
+                            <button class="btn btn-secondary" onclick="toggleLeaderboard('alltime')" id="alltimeBtn" style="padding: 8px 15px; font-size: 0.9em;">⭐ All-Time</button>
+                        </div>
+                    </div>
                     <div class="leaderboard-grid" id="leaderboardGrid"></div>
                 </div>
             </div>
@@ -860,12 +867,53 @@
         </div>
     </div>
 
+    <!-- Admin Point Adjustment Modal -->
+    <div id="pointsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePointsModal()">&times;</span>
+            <h2>⚙️ Adjust Points</h2>
+            <form id="pointsForm" onsubmit="submitPointAdjustment(event)">
+                <div class="form-group">
+                    <label for="adjustUserId">Player:</label>
+                    <select id="adjustUserId" name="adjustUserId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="adjustPoints">Points (use negative to subtract):</label>
+                    <input type="number" id="adjustPoints" name="adjustPoints" required placeholder="e.g., 5 or -3">
+                </div>
+                <div class="form-group">
+                    <label for="adjustReason">Reason:</label>
+                    <input type="text" id="adjustReason" name="adjustReason" placeholder="e.g., Extra credit for helping">
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1.2em;">💾 Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Split Task Modal -->
+    <div id="splitModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSplitModal()">&times;</span>
+            <h2>🤝 Split Task</h2>
+            <p id="splitTaskInfo" style="margin-bottom: 20px;"></p>
+            <form id="splitForm" onsubmit="submitSplitTask(event)">
+                <div class="form-group">
+                    <label for="splitWithUserId">Split with:</label>
+                    <select id="splitWithUserId" name="splitWithUserId" required></select>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1.2em;">✅ Split Task</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // Global variables
         let users = [];
         let currentUser = null;
         let chores = [];
         let editingChoreId = null;
+        let leaderboardMode = 'weekly'; // 'weekly' or 'alltime'
+        let splitTaskAssignmentId = null;
 
         // Avatar and color options
         const avatars = ['😀', '😎', '🤩', '🥳', '🤖', '👾', '🦄', '🐶', '🐱', '🐼', '🦊', '🐸', '🦁', '🐯', '🐨', '🐵', '🦉', '🦋', '🌈', '⭐', '🎨', '🎮', '⚽', '🏀'];
@@ -934,8 +982,10 @@
             // Show/hide admin controls
             if (currentUser.role === 'admin') {
                 document.getElementById('addChoreBtn').classList.remove('hidden');
+                document.getElementById('pointsBtn').classList.remove('hidden');
             } else {
                 document.getElementById('addChoreBtn').classList.add('hidden');
+                document.getElementById('pointsBtn').classList.add('hidden');
             }
 
             // Load data
@@ -1017,14 +1067,20 @@
                             // Prevent unchecking unless admin
                             const onclick = assignment.completed && !isAdmin ? 'return false;' : '';
                             
+                            const splitBtn = (!assignment.completed && isCurrentUser) ? 
+                                `<button class="btn btn-secondary" onclick="openSplitModal(${assignment.id}, '${escapeHtml(chore.title).replace(/'/g, "\\'")}')" style="padding: 8px 15px; font-size: 0.85em; margin-left: 10px;">🤝 Split</button>` : '';
+                            
                             assignmentHtml += `
-                                <div class="checkbox-wrapper" style="margin-bottom: 10px;">
-                                    <input type="checkbox" id="${checkboxId}" ${checked} ${disabled}
-                                        onclick="${onclick}"
-                                        onchange="completeAssignment(${assignment.id}, this.checked, '${checkboxId}')">
-                                    <label for="${checkboxId}" style="cursor: pointer;">
-                                        ${escapeHtml(assignment.user_name)}${assignment.completed ? ' ✅' : ''}
-                                    </label>
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <div class="checkbox-wrapper" style="flex: 1; margin-bottom: 0;">
+                                        <input type="checkbox" id="${checkboxId}" ${checked} ${disabled}
+                                            onclick="${onclick}"
+                                            onchange="completeAssignment(${assignment.id}, this.checked, '${checkboxId}')">
+                                        <label for="${checkboxId}" style="cursor: pointer;">
+                                            ${escapeHtml(assignment.user_name)}${assignment.completed ? ' ✅' : ''}
+                                        </label>
+                                    </div>
+                                    ${splitBtn}
                                 </div>
                             `;
                         }
@@ -1430,6 +1486,125 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Toggle leaderboard between weekly and all-time
+        async function toggleLeaderboard(mode) {
+            leaderboardMode = mode;
+            
+            // Update button styles
+            document.getElementById('weeklyBtn').style.opacity = mode === 'weekly' ? '1' : '0.5';
+            document.getElementById('alltimeBtn').style.opacity = mode === 'alltime' ? '1' : '0.5';
+            
+            await loadLeaderboard();
+        }
+
+        // Load leaderboard based on current mode
+        async function loadLeaderboard() {
+            try {
+                const endpoint = leaderboardMode === 'alltime' ? '/api/leaderboard/all-time' : '/api/leaderboard';
+                const response = await fetch(endpoint);
+                const leaderboard = await response.json();
+                renderLeaderboard(leaderboard);
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+            }
+        }
+
+        // Open admin point adjustment modal
+        function openPointsModal() {
+            const modal = document.getElementById('pointsModal');
+            const select = document.getElementById('adjustUserId');
+            
+            // Populate user dropdown
+            select.innerHTML = users.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+            
+            document.getElementById('pointsForm').reset();
+            modal.style.display = 'block';
+        }
+
+        function closePointsModal() {
+            document.getElementById('pointsModal').style.display = 'none';
+        }
+
+        // Submit point adjustment
+        async function submitPointAdjustment(event) {
+            event.preventDefault();
+            
+            const userId = parseInt(document.getElementById('adjustUserId').value);
+            const points = parseInt(document.getElementById('adjustPoints').value);
+            const reason = document.getElementById('adjustReason').value || 'Manual adjustment';
+            
+            try {
+                const response = await fetch(`/api/users/${userId}/points/adjust`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ points, reason })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to adjust points');
+                }
+                
+                const user = users.find(u => u.id === userId);
+                alert(`✅ ${points > 0 ? 'Added' : 'Removed'} ${Math.abs(points)} points ${points > 0 ? 'to' : 'from'} ${user.name}!`);
+                
+                closePointsModal();
+                await loadLeaderboard();
+            } catch (error) {
+                console.error('Error adjusting points:', error);
+                alert('❌ Failed to adjust points. Please try again.');
+            }
+        }
+
+        // Open split task modal
+        function openSplitModal(assignmentId, choreTitle) {
+            splitTaskAssignmentId = assignmentId;
+            
+            const modal = document.getElementById('splitModal');
+            const select = document.getElementById('splitWithUserId');
+            
+            document.getElementById('splitTaskInfo').textContent = `Split "${choreTitle}" with another player. Both will complete for points!`;
+            
+            // Populate user dropdown (exclude current user)
+            select.innerHTML = users.filter(u => u.id !== currentUser.id)
+                .map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`)
+                .join('');
+            
+            modal.style.display = 'block';
+        }
+
+        function closeSplitModal() {
+            document.getElementById('splitModal').style.display = 'none';
+            splitTaskAssignmentId = null;
+        }
+
+        // Submit split task
+        async function submitSplitTask(event) {
+            event.preventDefault();
+            
+            const splitWithUserId = parseInt(document.getElementById('splitWithUserId').value);
+            
+            try {
+                const response = await fetch(`/api/chores/assignment/${splitTaskAssignmentId}/split`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ split_with_user_id: splitWithUserId })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to split task');
+                }
+                
+                alert('✅ ' + data.message);
+                closeSplitModal();
+                await loadChores();
+            } catch (error) {
+                console.error('Error splitting task:', error);
+                alert('❌ ' + error.message);
+            }
         }
 
         // Close modals on outside click
