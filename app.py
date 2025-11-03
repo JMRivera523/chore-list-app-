@@ -316,6 +316,11 @@ def index():
     """Serve the main page."""
     return send_from_directory('static', 'index.html')
 
+@app.route('/health')
+def health():
+    """Health check endpoint for deployment platforms."""
+    return jsonify({'status': 'healthy', 'message': 'Chore List App is running'}), 200
+
 @app.route('/api/chores', methods=['GET'])
 def get_chores():
     """Get chores with assignments."""
@@ -794,8 +799,17 @@ def split_assignment(assignment_id):
         'message': f'✅ Task split! You AND the other player will EACH get the FULL {chore["points"]} points when completed. Not divided - full points for both! (Total: {chore["points"] * 2} points awarded)'
     })
 
+# Initialize database when app loads (important for production/gunicorn)
+print("=" * 50)
+print("🏠 CHORE LIST APP STARTING UP...")
+print("=" * 50)
+initialize_database()
+print("✅ Database initialized successfully")
+print(f"📊 App ready to serve requests")
+print("=" * 50)
+
 if __name__ == '__main__':
-    init_db()
+    # Database already initialized above, no need to call init_db() again
     # Check if running in Electron or standalone
     is_electron = os.environ.get('FLASK_ENV') == 'production'
     debug_mode = not is_electron
