@@ -452,22 +452,33 @@ def update_user(user_id):
     return jsonify(dict(user))
 
 @app.route('/api/chores/assignment/<int:assignment_id>/complete', methods=['PUT'])
-def complete_assignment():
+def complete_assignment(assignment_id):
     """Mark a chore assignment as complete."""
-    assignment_id = request.view_args['assignment_id']
-    data = request.get_json()
-    completed = data.get('completed', True)
-    
-    conn = get_db_connection()
-    conn.execute('''
-        UPDATE chore_assignments 
-        SET completed = ?, completed_at = ?
-        WHERE id = ?
-    ''', (1 if completed else 0, datetime.now().isoformat() if completed else None, assignment_id))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True})
+    try:
+        data = request.get_json()
+        completed = data.get('completed', True)
+        
+        conn = get_db_connection()
+        
+        # First check if assignment exists
+        assignment = conn.execute('SELECT * FROM chore_assignments WHERE id = ?', (assignment_id,)).fetchone()
+        if not assignment:
+            conn.close()
+            return jsonify({'error': 'Assignment not found'}), 404
+        
+        # Update the assignment
+        conn.execute('''
+            UPDATE chore_assignments 
+            SET completed = ?, completed_at = ?
+            WHERE id = ?
+        ''', (1 if completed else 0, datetime.now().isoformat() if completed else None, assignment_id))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error completing assignment {assignment_id}: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/leaderboard', methods=['GET'])
 def get_leaderboard():

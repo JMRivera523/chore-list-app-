@@ -1087,6 +1087,8 @@
 
         // Complete assignment
         async function completeAssignment(assignmentId, completed, checkboxId) {
+            console.log('Completing assignment:', assignmentId, 'completed:', completed);
+            
             // Keep the checkbox checked while processing
             const checkbox = document.getElementById(checkboxId);
             if (checkbox && completed) {
@@ -1100,8 +1102,11 @@
                     body: JSON.stringify({ completed: completed })
                 });
                 
+                const responseData = await response.json();
+                console.log('Response:', response.status, responseData);
+                
                 if (!response.ok) {
-                    throw new Error('Failed to complete assignment');
+                    throw new Error(responseData.error || 'Failed to complete assignment');
                 }
                 
                 if (completed) {
@@ -1116,7 +1121,7 @@
                 await loadLeaderboard();
             } catch (error) {
                 console.error('Error completing assignment:', error);
-                alert('Failed to complete assignment. Please try again.');
+                alert('Failed to complete assignment. Please try again.\nError: ' + error.message);
                 // Restore checkbox state on error
                 if (checkbox) {
                     checkbox.checked = !completed;
