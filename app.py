@@ -478,6 +478,11 @@ def update_chore(chore_id):
     priority = data.get('priority', chore['priority'])
     completed_by = data.get('completed_by', chore['completed_by'])
     recurrence_type = data.get('recurrence_type', chore['recurrence_type'])
+    assigned_to_all = data.get('assigned_to_all', chore['assigned_to_all'])
+    assigned_users = data.get('assigned_users', [])
+    
+    # Set points based on priority
+    points = 2 if priority == 'high' else 1
     
     # If marking as incomplete, clear the completed_by field
     if not completed:
@@ -485,17 +490,43 @@ def update_chore(chore_id):
     
     conn.execute(
         '''UPDATE chores 
-           SET title = ?, description = ?, completed = ?, priority = ?, completed_by = ?, recurrence_type = ?, updated_at = CURRENT_TIMESTAMP
+           SET title = ?, description = ?, completed = ?, priority = ?, points = ?, completed_by = ?, recurrence_type = ?, assigned_to_all = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ?''',
-        (title, description, completed, priority, completed_by, recurrence_type, chore_id)
+        (title, description, completed, priority, points, completed_by, recurrence_type, 1 if assigned_to_all else 0, chore_id)
     )
+    
+    # Update assignments if this is an assigned chore
+    if not assigned_to_all and assigned_users:
+        # Delete existing assignments
+        conn.execute('DELETE FROM chore_assignments WHERE chore_id = ?', (chore_id,))
+        
+        # Create new assignments
+        for user_id in assigned_users:
+            conn.execute(
+                'INSERT INTO chore_assignments (chore_id, user_id) VALUES (?, ?)',
+                (chore_id, user_id)
+            )
+    elif assigned_to_all:
+        # If switching to "everyone can complete", remove all assignments
+        conn.execute('DELETE FROM chore_assignments WHERE chore_id = ?', (chore_id,))
+    
     conn.commit()
     
-    # Fetch the updated chore
+    # Fetch the updated chore with assignments
     updated_chore = conn.execute('SELECT * FROM chores WHERE id = ?', (chore_id,)).fetchone()
+    assignments = conn.execute('''
+        SELECT ca.*, u.name as user_name 
+        FROM chore_assignments ca
+        JOIN users u ON ca.user_id = u.id
+        WHERE ca.chore_id = ?
+    ''', (chore_id,)).fetchall()
+    
     conn.close()
     
-    return jsonify(dict(updated_chore))
+    chore_dict = dict(updated_chore)
+    chore_dict['assignments'] = [dict(a) for a in assignments]
+    
+    return jsonify(chore_dict)
 
 @app.route('/api/chores/<int:chore_id>', methods=['DELETE'])
 def delete_chore(chore_id):
@@ -720,8 +751,12 @@ def split_general_chore(chore_id):
         conn.close()
         return jsonify({'error': 'Cannot split completed chore'}), 400
     
-    # Convert to assigned chore
-    conn.execute('UPDATE chores SET assigned_to_all = 0 WHERE id = ?', (chore_id,))
+    # Divide the points between users
+    original_points = chore['points']
+    points_per_person = original_points / 2
+    
+    # Convert to assigned chore and update points to split value
+    conn.execute('UPDATE chores SET assigned_to_all = 0, points = ? WHERE id = ?', (points_per_person, chore_id))
     
     # Create assignments for both users
     conn.execute('''
@@ -739,7 +774,7 @@ def split_general_chore(chore_id):
     
     return jsonify({
         'success': True,
-        'message': f'✅ Task split! You AND the other player will EACH get the FULL {chore["points"]} points when completed. Not divided - full points for both! (Total: {chore["points"] * 2} points awarded)'
+        'message': f'✅ Task split! The {original_points} points are now divided: you each get {int(points_per_person)} point(s) when completed. (Total: {original_points} points awarded)'
     })
 
 @app.route('/api/chores/assignment/<int:assignment_id>/split', methods=['POST'])
@@ -780,6 +815,13 @@ def split_assignment(assignment_id):
         conn.close()
         return jsonify({'error': 'Other user already has this assignment'}), 400
     
+    # Divide the points
+    original_points = chore['points']
+    points_per_person = original_points / 2
+    
+    # Update chore points to split value
+    conn.execute('UPDATE chores SET points = ? WHERE id = ?', (points_per_person, chore['id']))
+    
     # Create new assignment for the split user
     conn.execute('''
         INSERT INTO chore_assignments (chore_id, user_id, completed)
@@ -791,7 +833,7 @@ def split_assignment(assignment_id):
     
     return jsonify({
         'success': True,
-        'message': f'✅ Task split! You AND the other player will EACH get the FULL {chore["points"]} points when completed. Not divided - full points for both! (Total: {chore["points"] * 2} points awarded)'
+        'message': f'✅ Task split! The {original_points} points are now divided: you each get {int(points_per_person)} point(s) when completed. (Total: {original_points} points awarded)'
     })
 
 # Initialize database when app loads (important for production/gunicorn)

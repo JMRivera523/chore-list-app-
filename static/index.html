@@ -1572,7 +1572,7 @@
             
             document.getElementById('splitTaskInfo').innerHTML = `
                 <strong>Split "${choreTitle}" with another player!</strong><br>
-                This will convert it to assigned tasks - both of you will complete it individually for full points.
+                The points will be divided equally between you both. (e.g., 2 points = 1 point each)
             `;
             
             // Populate user dropdown (exclude current user)
@@ -1591,7 +1591,7 @@
             const modal = document.getElementById('splitModal');
             const select = document.getElementById('splitWithUserId');
             
-            document.getElementById('splitTaskInfo').textContent = `Split "${choreTitle}" with another player. Both will complete for points!`;
+            document.getElementById('splitTaskInfo').textContent = `Split "${choreTitle}" with another player. Points will be divided equally between you both!`;
             
             // Populate user dropdown (exclude current user)
             select.innerHTML = users.filter(u => u.id !== currentUser.id)
